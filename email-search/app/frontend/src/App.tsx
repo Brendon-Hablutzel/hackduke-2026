@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import type { User, SearchResult, IndexStatus, Stats, TodoItem, SearchFilters } from './api';
-import { getMe, getStats, getIndexStatus, triggerIndex, searchEmails, getTodos } from './api';
+import { getMe, getStats, getIndexStatus, triggerIndex, searchEmails, getTodos, markTodoDone } from './api';
 import Header from './components/Header';
 import Landing from './components/Landing';
 import SearchSection from './components/SearchSection';
@@ -89,6 +89,15 @@ export default function App() {
     }
   }, []);
 
+  const handleMarkDone = useCallback(async (gmailMessageId: string) => {
+    setTodos(prev => prev ? prev.map(t => t.gmail_message_id === gmailMessageId ? { ...t, done: true } : t) : prev);
+    try {
+      await markTodoDone(gmailMessageId);
+    } catch {
+      loadTodos(todoN);
+    }
+  }, [loadTodos, todoN]);
+
   const handleTodoNChange = (n: number) => {
     setTodoN(n);
     loadTodos(n);
@@ -160,6 +169,7 @@ export default function App() {
             onTodoNChange={handleTodoNChange}
             onRefresh={() => loadTodos(todoN)}
             onMount={() => { if (todos === null) loadTodos(todoN); }}
+            onMarkDone={handleMarkDone}
           />
         } />
         <Route path="*" element={<Navigate to="/" replace />} />

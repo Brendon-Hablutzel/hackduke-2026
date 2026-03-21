@@ -33,6 +33,7 @@ export interface Stats {
 }
 
 export interface TodoItem {
+  gmail_message_id: string;
   title: string;
   details: string;
   due_date: string | null;
@@ -41,6 +42,7 @@ export interface TodoItem {
   sender: string;
   date: string;
   gmail_url: string | null;
+  done: boolean;
 }
 
 export async function getMe(): Promise<{ authenticated: false } | { authenticated: true; user: User }> {
@@ -78,6 +80,14 @@ export async function searchEmails(
     throw new Error(err.detail ?? 'Search failed');
   }
   return r.json();
+}
+
+export async function markTodoDone(gmailMessageId: string): Promise<void> {
+  const r = await fetch(`/api/todos/${encodeURIComponent(gmailMessageId)}/done`, { method: 'POST' });
+  if (!r.ok) {
+    const err = await r.json();
+    throw new Error(err.detail ?? 'Failed to mark todo as done');
+  }
 }
 
 export async function getTodos(n: number): Promise<{ items: TodoItem[] }> {

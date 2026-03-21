@@ -32,8 +32,12 @@ def init_db() -> None:
                 sender           TEXT,
                 date             TEXT,
                 gmail_url        TEXT,
+                done             BOOLEAN NOT NULL DEFAULT FALSE,
                 PRIMARY KEY (user_sub, gmail_message_id)
             )
+        """)
+        con.execute("""
+            ALTER TABLE parsed_todos ADD COLUMN IF NOT EXISTS done BOOLEAN NOT NULL DEFAULT FALSE
         """)
 
 
@@ -74,6 +78,16 @@ def put_cached(user_sub: str, gmail_message_id: str, item: dict) -> None:
             item.get("date"),
             item.get("gmail_url"),
         ))
+
+
+def mark_done(user_sub: str, gmail_message_id: str) -> bool:
+    """Mark a todo as done. Returns True if a row was updated."""
+    with _conn() as con:
+        cur = con.execute(
+            "UPDATE parsed_todos SET done = TRUE WHERE user_sub = %s AND gmail_message_id = %s",
+            (user_sub, gmail_message_id),
+        )
+        return cur.rowcount > 0
 
 
 def delete_user_cache(user_sub: str) -> int:
