@@ -26,10 +26,19 @@ services:
     environment:
       - CHROMA_HOST=chromadb
       - CHROMA_PORT=8000
+      - APP_BASE_URL=http://localhost:3000
+      - CORS_ORIGINS=http://localhost:3000
     depends_on:
       chromadb:
         condition: service_healthy
     restart: unless-stopped
+
+  frontend:
+    build: ./app/frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - app
 
 volumes:
   chroma_data:
