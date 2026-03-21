@@ -79,6 +79,7 @@ def get_todos(user_sub: str, n: int = 20) -> List[dict]:
     for m in recent:
         score = _action_score(m.get("subject", ""), m.get("snippet", ""))
         todos.append({
+            "thread_id": m.get("thread_id", ""),
             "subject": m.get("subject", "(no subject)"),
             "sender": m.get("sender", ""),
             "date": m.get("date", ""),

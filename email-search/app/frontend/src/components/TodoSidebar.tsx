@@ -61,12 +61,18 @@ export default function TodoSidebar({ open, onClose, todos, loading, error, todo
           </div>
         )}
         {!loading && !error && todos && todos.map((item, i) => (
-          <div className="todo-item" key={i}>
+          <a
+            className="todo-item"
+            key={i}
+            href={item.thread_id ? `https://mail.google.com/mail/u/0/#all/${item.thread_id}` : undefined}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <span className={`todo-score ${todoScoreClass(item.score)}`}>{todoScoreLabel(item.score)}</span>
             <div className="todo-subject">{item.subject}</div>
             <div className="todo-meta">✉ {item.sender} &nbsp;·&nbsp; {fmtDate(item.date)}</div>
             <div className="todo-snippet">{item.snippet}</div>
-          </div>
+          </a>
         ))}
       </div>
     </aside>

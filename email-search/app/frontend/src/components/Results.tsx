@@ -53,7 +53,13 @@ export default function Results({ results, query, error }: Props) {
         {results.length} results for <strong>"{query}"</strong>
       </div>
       {results.map(r => (
-        <div className="card" key={r.rank}>
+        <a
+          className="card"
+          key={r.rank}
+          href={r.thread_id ? `https://mail.google.com/mail/u/0/#all/${r.thread_id}` : undefined}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
           <div className="card-top">
             <div className="card-subject">
               <span className="rank-chip">#{r.rank}</span>
@@ -68,7 +74,7 @@ export default function Results({ results, query, error }: Props) {
             <span>📅 {fmtDate(r.date)}</span>
           </div>
           <div className="card-snippet">{r.snippet}</div>
-        </div>
+        </a>
       ))}
     </div>
   );

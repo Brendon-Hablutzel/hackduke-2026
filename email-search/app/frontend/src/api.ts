@@ -7,6 +7,7 @@ export interface User {
 
 export interface SearchResult {
   rank: number;
+  thread_id: string;
   subject: string;
   sender: string;
   date: string;
@@ -26,6 +27,7 @@ export interface Stats {
 }
 
 export interface TodoItem {
+  thread_id: string;
   subject: string;
   sender: string;
   date: string;

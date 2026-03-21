@@ -210,14 +210,18 @@ select.inline-select:focus { border-color: var(--accent); }
 .results-header { font-size: 0.82rem; color: var(--muted); margin-bottom: 1rem; }
 
 .card {
+  display: block;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 1rem 1.3rem;
   margin-bottom: 0.75rem;
-  transition: box-shadow 0.15s;
+  transition: box-shadow 0.15s, border-color 0.15s;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
-.card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.08); }
+.card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.08); border-color: var(--accent); }
 .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
 .card-subject { font-size: 0.97rem; font-weight: 600; flex: 1; }
 .rank-chip {
@@ -330,14 +334,18 @@ select.inline-select:focus { border-color: var(--accent); }
 }
 
 .todo-item {
+  display: block;
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 0.75rem 0.9rem;
   margin-bottom: 0.6rem;
   background: #fafafa;
-  transition: box-shadow 0.12s;
+  transition: box-shadow 0.12s, border-color 0.12s;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
 }
-.todo-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.07); background: #fff; }
+.todo-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.07); background: #fff; border-color: var(--accent); }
 
 .todo-subject {
   font-size: 0.87rem;
