@@ -51,9 +51,87 @@ header {
 }
 .header-right { display: flex; align-items: center; gap: 0.75rem; }
 
-.user-chip { display: flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; }
-.user-chip img { width: 28px; height: 28px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.3); }
+.user-menu { position: relative; }
+
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  background: none;
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 99px;
+  padding: 3px 10px 3px 4px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.user-chip:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.4); }
+.user-chip img { width: 26px; height: 26px; border-radius: 50%; display: block; }
 .user-chip span { color: rgba(255,255,255,0.85); }
+.user-avatar-fallback {
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.user-menu-caret { font-size: 0.55rem; color: rgba(255,255,255,0.5); }
+
+.user-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 200px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.13);
+  z-index: 200;
+  overflow: hidden;
+}
+.user-dropdown-info {
+  padding: 0.85rem 1rem 0.75rem;
+}
+.user-dropdown-name {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-dropdown-email {
+  font-size: 0.77rem;
+  color: var(--muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-dropdown-divider { height: 1px; background: var(--border); }
+.user-dropdown-item {
+  display: block;
+  padding: 0.65rem 1rem;
+  font-size: 0.85rem;
+  color: var(--text);
+  text-decoration: none;
+  transition: background 0.12s;
+}
+.user-dropdown-item:hover { background: var(--bg); }
+
+/* nav links in dropdown — only shown on narrow screens */
+.user-dropdown-nav { display: none; }
+
+@media (max-width: 600px) {
+  /* header > .header-right specificity beats .btn-ghost */
+  .header-right .header-nav-link { display: none !important; }
+  .user-dropdown-nav { display: block; }
+}
 
 .btn-ghost {
   background: transparent;
