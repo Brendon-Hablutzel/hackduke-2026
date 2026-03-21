@@ -1,22 +1,14 @@
-import type { TodoItem } from '../api';
+import type { TodoBuckets, TodoItem } from '../api';
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  todos: TodoItem[] | null;
+  buckets: TodoBuckets | null;
   loading: boolean;
   error: string | null;
-  todoN: number;
-  onTodoNChange: (n: number) => void;
+  todoDays: number;
+  onTodoDaysChange: (days: number) => void;
   onRefresh: () => void;
-}
-
-function todoScoreClass(s: number): string {
-  return s >= 0.6 ? 'high' : s >= 0.25 ? 'mid' : 'low';
-}
-
-function todoScoreLabel(s: number): string {
-  return s >= 0.6 ? 'high priority' : s >= 0.25 ? 'action needed' : 'low priority';
 }
 
 function fmtDate(str: string): string {
@@ -28,7 +20,29 @@ function fmtDate(str: string): string {
   }
 }
 
-export default function TodoSidebar({ open, onClose, todos, loading, error, todoN, onTodoNChange, onRefresh }: Props) {
+function TodoItemCard({ item }: { item: TodoItem }) {
+  return (
+    <div className="todo-item">
+      {item.deadline_text && (
+        <div className="todo-deadline">📅 {item.deadline_text}</div>
+      )}
+      {item.action && (
+        <div className="todo-action">{item.action}</div>
+      )}
+      <div className="todo-subject">{item.subject || '(no subject)'}</div>
+      <div className="todo-meta">
+        ✉ {item.sender}{item.date ? ` · ${fmtDate(item.date)}` : ''}
+      </div>
+      {item.snippet && <div className="todo-snippet">{item.snippet}</div>}
+    </div>
+  );
+}
+
+export default function TodoSidebar({ open, onClose, buckets, loading, error, todoDays, onTodoDaysChange, onRefresh }: Props) {
+  const hasItems = buckets && (
+    buckets.next_24h.length + buckets.next_week.length + buckets.undated.length > 0
+  );
+
   return (
     <aside className={`todo-sidebar${open ? ' open' : ''}`}>
       <div className="sidebar-header">
@@ -37,12 +51,11 @@ export default function TodoSidebar({ open, onClose, todos, loading, error, todo
           <button className="sidebar-close" onClick={onClose} title="Close">✕</button>
         </div>
         <div className="sidebar-controls">
-          <span>From latest</span>
-          <select value={todoN} onChange={e => onTodoNChange(Number(e.target.value))}>
-            <option value={10}>10 emails</option>
-            <option value={20}>20 emails</option>
-            <option value={50}>50 emails</option>
-            <option value={100}>100 emails</option>
+          <span>Window:</span>
+          <select value={todoDays} onChange={e => onTodoDaysChange(Number(e.target.value))}>
+            <option value={7}>7 days</option>
+            <option value={14}>14 days</option>
+            <option value={30}>30 days</option>
           </select>
           <button className="sidebar-refresh" onClick={onRefresh}>↻ Refresh</button>
         </div>
@@ -54,20 +67,35 @@ export default function TodoSidebar({ open, onClose, todos, loading, error, todo
         {!loading && error && (
           <div className="sidebar-empty">Error: {error}</div>
         )}
-        {!loading && !error && todos !== null && todos.length === 0 && (
+        {!loading && !error && buckets !== null && !hasItems && (
           <div className="sidebar-empty">
-            No action items found in these emails.<br /><br />
-            Try indexing more emails first.
+            {buckets.total === 0
+              ? <>No action items found.<br /><br />Try indexing more emails first.</>
+              : 'No upcoming action items in this window.'}
           </div>
         )}
-        {!loading && !error && todos && todos.map((item, i) => (
-          <div className="todo-item" key={i}>
-            <span className={`todo-score ${todoScoreClass(item.score)}`}>{todoScoreLabel(item.score)}</span>
-            <div className="todo-subject">{item.subject}</div>
-            <div className="todo-meta">✉ {item.sender} &nbsp;·&nbsp; {fmtDate(item.date)}</div>
-            <div className="todo-snippet">{item.snippet}</div>
-          </div>
-        ))}
+        {!loading && !error && hasItems && (
+          <>
+            {buckets!.next_24h.length > 0 && (
+              <>
+                <div className="todo-bucket-label">⚡ Due in 24 hours</div>
+                {buckets!.next_24h.map((item, i) => <TodoItemCard key={i} item={item} />)}
+              </>
+            )}
+            {buckets!.next_week.length > 0 && (
+              <>
+                <div className="todo-bucket-label">📅 This week</div>
+                {buckets!.next_week.map((item, i) => <TodoItemCard key={i} item={item} />)}
+              </>
+            )}
+            {buckets!.undated.length > 0 && (
+              <>
+                <div className="todo-bucket-label">📝 No Deadline</div>
+                {buckets!.undated.map((item, i) => <TodoItemCard key={i} item={item} />)}
+              </>
+            )}
+          </>
+        )}
       </div>
     </aside>
   );

@@ -4,6 +4,7 @@ interface Props {
   results: SearchResult[] | null;
   query: string;
   error: string | null;
+  multiInbox: boolean;
 }
 
 function scoreClass(s: number): string {
@@ -19,7 +20,7 @@ function fmtDate(str: string): string {
   }
 }
 
-export default function Results({ results, query, error }: Props) {
+export default function Results({ results, query, error, multiInbox }: Props) {
   if (error) {
     return (
       <div className="results-section">
@@ -58,6 +59,9 @@ export default function Results({ results, query, error }: Props) {
             <div className="card-subject">
               <span className="rank-chip">#{r.rank}</span>
               {r.subject || '(no subject)'}
+              {multiInbox && r.inbox_email && (
+                <span className="card-inbox-tag">{r.inbox_email}</span>
+              )}
             </div>
             <span className={`score-badge ${scoreClass(r.score)}`}>
               {(r.score * 100).toFixed(0)}%

@@ -11,6 +11,7 @@ export default defineConfig({
       '/index': 'http://localhost:8000',
       '/stats': 'http://localhost:8000',
       '/todos': 'http://localhost:8000',
+      '/inboxes': 'http://localhost:8000',
       '/health': 'http://localhost:8000',
     },
   },
