@@ -96,9 +96,14 @@ export default function App() {
 
   const handleReindex = async () => {
     setIndexStatus(prev => ({ ...prev ?? { result: null, error: null }, running: true }));
-    const data = await triggerIndex(maxEmails);
-    if (data.status === 'started' || data.status === 'already_running') {
-      pollIndexStatus();
+    try {
+      const data = await triggerIndex(maxEmails);
+      if (data.status === 'started' || data.status === 'already_running') {
+        pollIndexStatus();
+      }
+    } catch (e: unknown) {
+      const err = e as Error;
+      setIndexStatus({ running: false, result: null, error: err.message ?? 'Failed to start indexing' });
     }
   };
 
