@@ -1,4 +1,4 @@
-import type { Stats, IndexStatus } from '../api';
+import type { Stats, IndexStatus, SearchFilters } from '../api';
 
 interface Props {
   query: string;
@@ -12,13 +12,14 @@ interface Props {
   onReindex: () => void;
   stats: Stats | null;
   indexStatus: IndexStatus | null;
+  filters: SearchFilters;
+  onFiltersChange: (f: SearchFilters) => void;
 }
 
 function statusDotClass(status: IndexStatus | null): string {
   if (!status) return 'status-dot';
   if (status.running) return 'status-dot indexing';
   if (status.error) return 'status-dot error';
-  if (status.result) return 'status-dot ok';
   return 'status-dot ok';
 }
 
@@ -40,8 +41,10 @@ function fmtStats(stats: Stats | null): string {
 export default function SearchSection({
   query, onQueryChange, onSearch, searching,
   k, onKChange, maxEmails, onMaxEmailsChange, onReindex,
-  stats, indexStatus,
+  stats, indexStatus, filters, onFiltersChange,
 }: Props) {
+  const hasActiveFilters = filters.from !== '' || filters.hasAttachment;
+
   return (
     <div className="search-section">
       <div className="search-row">
@@ -73,6 +76,41 @@ export default function SearchSection({
           ↻ Re-index
         </button>
       </div>
+
+      <div className="filter-bar">
+        <span className="filter-bar-label">Filters</span>
+        <div className="filter-bar-item">
+          <label className="filter-bar-fieldlabel" htmlFor="filter-from">From</label>
+          <input
+            id="filter-from"
+            className="filter-bar-input"
+            type="text"
+            placeholder="sender name or email"
+            value={filters.from}
+            onChange={e => onFiltersChange({ ...filters, from: e.target.value })}
+            onKeyDown={e => e.key === 'Enter' && onSearch()}
+          />
+        </div>
+        <div className="filter-bar-item">
+          <label className="filter-bar-checkbox">
+            <input
+              type="checkbox"
+              checked={filters.hasAttachment}
+              onChange={e => onFiltersChange({ ...filters, hasAttachment: e.target.checked })}
+            />
+            Has attachment
+          </label>
+        </div>
+        {hasActiveFilters && (
+          <button
+            className="filter-bar-clear"
+            onClick={() => onFiltersChange({ from: '', hasAttachment: false })}
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
       <div className="meta-row">
         <span>
           Results:{' '}

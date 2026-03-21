@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { User, SearchResult, IndexStatus, Stats, TodoItem } from './api';
+import type { User, SearchResult, IndexStatus, Stats, TodoItem, SearchFilters } from './api';
 import { getMe, getStats, getIndexStatus, triggerIndex, searchEmails, getTodos } from './api';
 import Header from './components/Header';
 import Landing from './components/Landing';
@@ -12,6 +12,7 @@ export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
 
   const [query, setQuery] = useState('');
+  const [filters, setFilters] = useState<SearchFilters>({ from: '', hasAttachment: false });
   const [k, setK] = useState(10);
   const [maxEmails, setMaxEmails] = useState(500);
   const [searching, setSearching] = useState(false);
@@ -107,7 +108,7 @@ export default function App() {
     setSearchError(null);
     setLastQuery(q);
     try {
-      const data = await searchEmails(q, k);
+      const data = await searchEmails(q, k, filters);
       setResults(data.results);
     } catch (e: unknown) {
       setResults([]);
@@ -143,6 +144,8 @@ export default function App() {
             onReindex={handleReindex}
             stats={stats}
             indexStatus={indexStatus}
+            filters={filters}
+            onFiltersChange={setFilters}
           />
           <Results results={results} query={lastQuery} error={searchError} />
         </div>

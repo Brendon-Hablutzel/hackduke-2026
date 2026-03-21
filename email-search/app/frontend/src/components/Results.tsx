@@ -64,6 +64,7 @@ export default function Results({ results, query, error }: Props) {
             <div className="card-subject">
               <span className="rank-chip">#{r.rank}</span>
               {r.subject || '(no subject)'}
+              {r.has_attachment && <span className="attachment-badge">📎 attachment</span>}
             </div>
             <span className={`score-badge ${scoreClass(r.score)}`}>
               {(r.score * 100).toFixed(0)}%

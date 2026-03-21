@@ -1,7 +1,7 @@
 """Hybrid search: vector similarity + BM25 re-ranking, scoped per user."""
 
 import logging
-from typing import List
+from typing import List, Optional
 
 from rank_bm25 import BM25Okapi
 
@@ -26,7 +26,9 @@ def _cosine_score(distance: float) -> float:
     return max(0.0, 1.0 - distance)
 
 
-def search(query: str, user_sub: str, k: int = 10) -> List[dict]:
+def search(query: str, user_sub: str, k: int = 10,
+           from_filter: Optional[str] = None,
+           has_attachment: Optional[bool] = None) -> List[dict]:
     """Hybrid search for a specific user's indexed emails."""
     count = collection_count(user_sub)
     if count == 0:
@@ -67,12 +69,20 @@ def search(query: str, user_sub: str, k: int = 10) -> List[dict]:
             "snippet": meta.get("snippet", ""),
             "labels": meta.get("labels", "[]"),
             "thread_id": meta.get("thread_id", ""),
+            "has_attachment": bool(meta.get("has_attachment", 0)),
             "score": round(score, 4),
             "vector_score": round(vector_scores[i], 4),
             "bm25_score": round(bm25_norm[i], 4),
         }
         for i, (doc_id, meta, score) in enumerate(zip(ids, metadatas, blended))
     ]
+
+    if from_filter:
+        needle = from_filter.lower()
+        results = [r for r in results if needle in r["sender"].lower()]
+
+    if has_attachment is True:
+        results = [r for r in results if r["has_attachment"]]
 
     results.sort(key=lambda x: x["score"], reverse=True)
     for i, r in enumerate(results):

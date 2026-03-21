@@ -5,6 +5,11 @@ export interface User {
   picture: string;
 }
 
+export interface SearchFilters {
+  from: string;
+  hasAttachment: boolean;
+}
+
 export interface SearchResult {
   rank: number;
   thread_id: string;
@@ -12,6 +17,7 @@ export interface SearchResult {
   sender: string;
   date: string;
   snippet: string;
+  has_attachment: boolean;
   score: number;
 }
 
@@ -56,8 +62,15 @@ export async function triggerIndex(maxEmails: number): Promise<{ status: string 
   return r.json();
 }
 
-export async function searchEmails(q: string, k: number): Promise<{ query: string; results: SearchResult[] }> {
-  const r = await fetch(`/search?q=${encodeURIComponent(q)}&k=${k}`);
+export async function searchEmails(
+  q: string,
+  k: number,
+  filters: SearchFilters,
+): Promise<{ query: string; results: SearchResult[] }> {
+  const params = new URLSearchParams({ q, k: String(k) });
+  if (filters.from) params.set('from_filter', filters.from);
+  if (filters.hasAttachment) params.set('has_attachment', 'true');
+  const r = await fetch(`/search?${params}`);
   if (!r.ok) {
     const err = await r.json();
     throw new Error(err.detail ?? 'Search failed');

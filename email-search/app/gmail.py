@@ -33,6 +33,16 @@ def get_gmail_service(creds: Credentials):
     return build("gmail", "v1", credentials=creds)
 
 
+def _has_attachment(payload: dict) -> bool:
+    """Return True if the message has at least one file attachment."""
+    for part in payload.get("parts", []):
+        if part.get("filename") and part.get("body", {}).get("size", 0) > 0:
+            return True
+        if _has_attachment(part):
+            return True
+    return False
+
+
 def _decode_body(payload: dict) -> str:
     """Recursively extract plain-text body from a Gmail message payload."""
     import base64
@@ -95,8 +105,9 @@ def fetch_emails(creds: Credentials, max_emails: int = 500) -> Generator[dict, N
                         format="full",
                     ).execute
                 )
-                headers = {h["name"].lower(): h["value"] for h in msg.get("payload", {}).get("headers", [])}
-                body = _decode_body(msg.get("payload", {}))
+                payload = msg.get("payload", {})
+                headers = {h["name"].lower(): h["value"] for h in payload.get("headers", [])}
+                body = _decode_body(payload)
 
                 yield {
                     "id": msg["id"],
@@ -106,6 +117,7 @@ def fetch_emails(creds: Credentials, max_emails: int = 500) -> Generator[dict, N
                     "date": headers.get("date", ""),
                     "snippet": msg.get("snippet", ""),
                     "labels": msg.get("labelIds", []),
+                    "has_attachment": _has_attachment(payload),
                     "body": body,
                 }
                 fetched += 1
