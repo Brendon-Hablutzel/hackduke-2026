@@ -8,6 +8,7 @@ export interface User {
 export interface SearchFilters {
   from: string;
   hasAttachment: boolean;
+  smartFilter: boolean;
 }
 
 export interface SearchResult {
@@ -70,6 +71,7 @@ export async function searchEmails(
   const params = new URLSearchParams({ q, k: String(k) });
   if (filters.from) params.set('from_filter', filters.from);
   if (filters.hasAttachment) params.set('has_attachment', 'true');
+  if (!filters.smartFilter) params.set('smart_filter', 'false');
   const r = await fetch(`/search?${params}`);
   if (!r.ok) {
     const err = await r.json();

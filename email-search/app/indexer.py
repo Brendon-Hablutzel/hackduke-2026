@@ -4,6 +4,7 @@ import json
 import logging
 import os
 from datetime import datetime, timezone
+from email.utils import parsedate_to_datetime
 from typing import Callable, Optional
 
 from google.oauth2.credentials import Credentials
@@ -34,6 +35,34 @@ def load_stats(user_sub: str) -> dict:
     return {"indexed_count": 0, "last_sync": None}
 
 
+def _parse_date(date_str: str) -> datetime:
+    try:
+        return parsedate_to_datetime(date_str)
+    except Exception:
+        return datetime.min.replace(tzinfo=timezone.utc)
+
+
+def _build_thread_context(email: dict, thread_emails: list[dict]) -> str:
+    """Build full_text with up to 2 preceding thread messages prepended as context."""
+    current_id = email["id"]
+    position = next((i for i, e in enumerate(thread_emails) if e["id"] == current_id), 0)
+    predecessors = thread_emails[max(0, position - 2):position]
+
+    current_body = summarize_if_long(preprocess(email["body"]))
+    current_block = f"[This message]\nSubject: {email['subject']}\n\n{current_body}".strip()
+
+    if not predecessors:
+        return f"Subject: {email['subject']}\n\n{current_body}".strip()
+
+    context_blocks = []
+    for prev in predecessors:
+        prev_body = summarize_if_long(preprocess(prev["body"]))
+        context_blocks.append(f"From: {prev['sender']}\n{prev_body}")
+
+    context_section = "\n\n---\n".join(context_blocks)
+    return f"[Thread context]\n{context_section}\n\n---\n{current_block}"
+
+
 def run_indexing(
     creds: Credentials,
     user_sub: str,
@@ -43,6 +72,17 @@ def run_indexing(
     logger.info("Starting indexing for user %s (max=%d)", user_sub, max_emails)
     already_indexed = get_indexed_ids(user_sub)
     logger.info("%d emails already indexed", len(already_indexed))
+
+    # First pass: collect all emails and build thread map
+    logger.info("First pass: fetching all emails to build thread map…")
+    all_emails: list[dict] = list(fetch_emails(creds, max_emails=max_emails))
+
+    thread_map: dict[str, list[dict]] = {}
+    for email in all_emails:
+        thread_map.setdefault(email["thread_id"], []).append(email)
+    for tid in thread_map:
+        thread_map[tid].sort(key=lambda e: _parse_date(e["date"]))
+    logger.info("Built thread map: %d threads from %d emails", len(thread_map), len(all_emails))
 
     batch_ids, batch_docs, batch_meta, batch_texts = [], [], [], []
     new_count = skipped_count = 0
@@ -57,16 +97,15 @@ def run_indexing(
         logger.info("Indexed batch of %d (total new: %d)", len(batch_texts), new_count)
         batch_ids.clear(); batch_docs.clear(); batch_meta.clear(); batch_texts.clear()
 
-    for email in fetch_emails(creds, max_emails=max_emails):
+    for email in all_emails:
         if email["id"] in already_indexed:
             skipped_count += 1
             if progress_callback:
                 progress_callback(new_count, skipped_count)
             continue
 
-        clean_body = preprocess(email["body"])
-        embed_text = summarize_if_long(clean_body)
-        full_text = f"Subject: {email['subject']}\n\n{embed_text}".strip()
+        thread_emails = thread_map.get(email["thread_id"], [email])
+        full_text = _build_thread_context(email, thread_emails)
 
         batch_ids.append(email["id"])
         batch_docs.append(full_text)
@@ -80,6 +119,7 @@ def run_indexing(
             "snippet": email["snippet"][:500],
             "labels": json.dumps(email["labels"]),
             "has_attachment": 1 if email.get("has_attachment") else 0,
+            "has_ses_outgoing": 1 if email.get("has_ses_outgoing") else 0,
         })
 
         if len(batch_texts) >= _BATCH_SIZE:

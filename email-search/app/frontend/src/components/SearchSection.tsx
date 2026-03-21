@@ -45,6 +45,10 @@ export default function SearchSection({
 }: Props) {
   const hasActiveFilters = filters.from !== '' || filters.hasAttachment;
 
+  const handleSmartFilterChange = (checked: boolean) => {
+    onFiltersChange({ ...filters, smartFilter: checked });
+  };
+
   return (
     <div className="search-section">
       <div className="search-row">
@@ -101,10 +105,20 @@ export default function SearchSection({
             Has attachment
           </label>
         </div>
+        <div className="filter-bar-item">
+          <label className="filter-bar-checkbox" title="Hides promotions, social, and spam">
+            <input
+              type="checkbox"
+              checked={filters.smartFilter}
+              onChange={e => handleSmartFilterChange(e.target.checked)}
+            />
+            Smart filter
+          </label>
+        </div>
         {hasActiveFilters && (
           <button
             className="filter-bar-clear"
-            onClick={() => onFiltersChange({ from: '', hasAttachment: false })}
+            onClick={() => onFiltersChange({ from: '', hasAttachment: false, smartFilter: true })}
           >
             Clear
           </button>

@@ -12,7 +12,7 @@ export default function App() {
   const [authChecked, setAuthChecked] = useState(false);
 
   const [query, setQuery] = useState('');
-  const [filters, setFilters] = useState<SearchFilters>({ from: '', hasAttachment: false });
+  const [filters, setFilters] = useState<SearchFilters>({ from: '', hasAttachment: false, smartFilter: true });
   const [k, setK] = useState(10);
   const [maxEmails, setMaxEmails] = useState(500);
   const [searching, setSearching] = useState(false);

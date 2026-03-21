@@ -232,12 +232,14 @@ async def search_emails(
     k: int = Query(default=10, ge=1, le=100),
     from_filter: Optional[str] = Query(default=None),
     has_attachment: Optional[bool] = Query(default=None),
+    smart_filter: bool = Query(default=True),
 ):
     user = _get_user_or_401(request)
     try:
         results = search(q.strip(), user_sub=user["sub"], k=k,
                          from_filter=from_filter or None,
-                         has_attachment=has_attachment)
+                         has_attachment=has_attachment,
+                         smart_filter=smart_filter)
         return {"query": q, "k": k, "results": results}
     except ConnectionError as e:
         raise HTTPException(status_code=503, detail=str(e))

@@ -1,5 +1,6 @@
 """Hybrid search: vector similarity + BM25 re-ranking, scoped per user."""
 
+import json
 import logging
 from typing import List, Optional
 
@@ -26,15 +27,30 @@ def _cosine_score(distance: float) -> float:
     return max(0.0, 1.0 - distance)
 
 
+_NOISE_LABELS = {"CATEGORY_PROMOTIONS", "CATEGORY_SOCIAL", "CATEGORY_FORUMS"}
+
+
+def _is_noise(result: dict) -> bool:
+    labels = set(json.loads(result.get("labels", "[]")))
+    if labels & _NOISE_LABELS:
+        return True
+    if result.get("has_ses_outgoing"):
+        return True
+    if len(result.get("snippet", "").strip()) < 20:
+        return True
+    return False
+
+
 def search(query: str, user_sub: str, k: int = 10,
            from_filter: Optional[str] = None,
-           has_attachment: Optional[bool] = None) -> List[dict]:
+           has_attachment: Optional[bool] = None,
+           smart_filter: bool = True) -> List[dict]:
     """Hybrid search for a specific user's indexed emails."""
     count = collection_count(user_sub)
     if count == 0:
         return []
 
-    candidate_k = min(k * 3, count)
+    candidate_k = min(k * 5 if smart_filter else k * 3, count)
     embedding = embed_query(query)
 
     try:
@@ -70,12 +86,16 @@ def search(query: str, user_sub: str, k: int = 10,
             "labels": meta.get("labels", "[]"),
             "thread_id": meta.get("thread_id", ""),
             "has_attachment": bool(meta.get("has_attachment", 0)),
+            "has_ses_outgoing": bool(meta.get("has_ses_outgoing", 0)),
             "score": round(score, 4),
             "vector_score": round(vector_scores[i], 4),
             "bm25_score": round(bm25_norm[i], 4),
         }
         for i, (doc_id, meta, score) in enumerate(zip(ids, metadatas, blended))
     ]
+
+    if smart_filter:
+        results = [r for r in results if not _is_noise(r)]
 
     if from_filter:
         needle = from_filter.lower()

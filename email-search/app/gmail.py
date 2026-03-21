@@ -118,6 +118,7 @@ def fetch_emails(creds: Credentials, max_emails: int = 500) -> Generator[dict, N
                     "snippet": msg.get("snippet", ""),
                     "labels": msg.get("labelIds", []),
                     "has_attachment": _has_attachment(payload),
+                    "has_ses_outgoing": "x-ses-outgoing" in headers,
                     "body": body,
                 }
                 fetched += 1
