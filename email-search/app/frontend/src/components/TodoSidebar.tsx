@@ -11,15 +11,7 @@ interface Props {
   onRefresh: () => void;
 }
 
-function todoScoreClass(s: number): string {
-  return s >= 0.6 ? 'high' : s >= 0.25 ? 'mid' : 'low';
-}
-
-function todoScoreLabel(s: number): string {
-  return s >= 0.6 ? 'high priority' : s >= 0.25 ? 'action needed' : 'low priority';
-}
-
-function fmtDate(str: string): string {
+function fmtDate(str: string | null): string {
   if (!str) return '';
   try {
     return new Date(str).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -33,7 +25,7 @@ export default function TodoSidebar({ open, onClose, todos, loading, error, todo
     <aside className={`todo-sidebar${open ? ' open' : ''}`}>
       <div className="sidebar-header">
         <div className="sidebar-header-top">
-          <span className="sidebar-title">☑ To-do</span>
+          <span className="sidebar-title">☑ Action Needed</span>
           <button className="sidebar-close" onClick={onClose} title="Close">✕</button>
         </div>
         <div className="sidebar-controls">
@@ -49,7 +41,7 @@ export default function TodoSidebar({ open, onClose, todos, loading, error, todo
       </div>
       <div className="sidebar-body">
         {loading && (
-          <div className="sidebar-loading"><span className="spinner" /> Loading…</div>
+          <div className="sidebar-loading"><span className="spinner" /> Parsing emails…</div>
         )}
         {!loading && error && (
           <div className="sidebar-empty">Error: {error}</div>
@@ -61,18 +53,24 @@ export default function TodoSidebar({ open, onClose, todos, loading, error, todo
           </div>
         )}
         {!loading && !error && todos && todos.map((item, i) => (
-          <a
-            className="todo-item"
-            key={i}
-            href={item.thread_id ? `https://mail.google.com/mail/u/0/#all/${item.thread_id}` : undefined}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <span className={`todo-score ${todoScoreClass(item.score)}`}>{todoScoreLabel(item.score)}</span>
-            <div className="todo-subject">{item.subject}</div>
-            <div className="todo-meta">✉ {item.sender} &nbsp;·&nbsp; {fmtDate(item.date)}</div>
-            <div className="todo-snippet">{item.snippet}</div>
-          </a>
+          <div className="todo-item" key={i}>
+            <span className={`todo-score ${item.priority}`}>{item.priority} priority</span>
+            <div className="todo-subject">{item.title}</div>
+            <div className="todo-snippet">{item.details}</div>
+            {(item.due_date || item.location) && (
+              <div className="todo-meta">
+                {item.due_date && <span>📅 {fmtDate(item.due_date)}</span>}
+                {item.due_date && item.location && <span> &nbsp;·&nbsp; </span>}
+                {item.location && <span>📍 {item.location}</span>}
+              </div>
+            )}
+            <div className="todo-meta">
+              ✉ {item.sender}{item.date ? ` · ${fmtDate(item.date)}` : ''}
+              {item.gmail_url && (
+                <> &nbsp;·&nbsp; <a href={item.gmail_url} target="_blank" rel="noopener noreferrer">Open in Gmail ↗</a></>
+              )}
+            </div>
+          </div>
         ))}
       </div>
     </aside>

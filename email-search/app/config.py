@@ -26,6 +26,12 @@ class Config:
     # Storage
     DATA_DIR: str = os.getenv("DATA_DIR", "./data")
 
+    # Gemini
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+
+    # PostgreSQL
+    DATABASE_URL: str = os.getenv("DATABASE_URL", "postgresql://emailsearch:emailsearch@localhost:5432/emailsearch")
+
     @property
     def redirect_uri(self) -> str:
         return f"{self.APP_BASE_URL}/auth/callback"
