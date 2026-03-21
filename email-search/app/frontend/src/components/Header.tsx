@@ -24,7 +24,7 @@ export default function Header({ user, onTodoToggle, sidebarOpen }: Props) {
               ☑ To-do
             </button>
             <div className="user-chip">
-              {user.picture && <img src={user.picture} alt="" />}
+              {user.picture && <img src="/auth/avatar" alt="" />}
               <span>{user.name || user.email}</span>
               <a href="/auth/logout" className="btn-ghost">Sign out</a>
             </div>
