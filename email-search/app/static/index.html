@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email Semantic Search</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f4f6f9;
+      --surface: #ffffff;
+      --border: #e4e4e4;
+      --text: #1a1a2e;
+      --muted: #6b7280;
+      --accent: #4a90e2;
+      --accent-dark: #357abd;
+      --danger: #dc3545;
+      --success: #28a745;
+      --warning: #f0a500;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* ── Header ─────────────────────────────── */
+    header {
+      background: var(--text);
+      color: #fff;
+      padding: 0 2rem;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .header-left { display: flex; align-items: center; gap: 0.75rem; }
+    .header-left h1 { font-size: 1.1rem; font-weight: 600; }
+    .badge {
+      background: var(--accent);
+      font-size: 0.65rem;
+      padding: 2px 7px;
+      border-radius: 99px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+    }
+
+    /* User chip */
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+    }
+    .user-chip img {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.3);
+    }
+    .user-chip span { color: rgba(255,255,255,0.85); }
+    .btn-ghost {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.3);
+      color: rgba(255,255,255,0.85);
+      padding: 4px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      transition: background 0.15s;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.1); }
+
+    /* ── Landing / Sign-in ───────────────────── */
+    #landing {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 56px);
+      padding: 2rem;
+    }
+    .landing-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 3rem 2.5rem;
+      max-width: 420px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.07);
+    }
+    .landing-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      line-height: 1;
+    }
+    .landing-card h2 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .landing-card p { color: var(--muted); font-size: 0.92rem; margin-bottom: 2rem; line-height: 1.6; }
+
+    .btn-google {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.6rem;
+      background: var(--surface);
+      color: var(--text);
+      border: 1.5px solid var(--border);
+      padding: 0.65rem 1.5rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: box-shadow 0.15s, border-color 0.15s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+    }
+    .btn-google:hover { box-shadow: 0 2px 10px rgba(0,0,0,0.13); border-color: #bbb; }
+    .btn-google svg { flex-shrink: 0; }
+
+    /* ── Search app ──────────────────────────── */
+    #app { display: none; }
+
+    .search-section {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 2rem;
+    }
+    .search-row { display: flex; gap: 0.6rem; max-width: 860px; }
+    #query {
+      flex: 1;
+      padding: 0.65rem 1rem;
+      font-size: 0.95rem;
+      border: 1.5px solid #ccc;
+      border-radius: 8px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    #query:focus { border-color: var(--accent); }
+
+    button {
+      padding: 0.65rem 1.2rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s, opacity 0.15s;
+      white-space: nowrap;
+    }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-dark); }
+    .btn-secondary { background: #f0f0f0; color: #333; border: 1.5px solid #ddd; }
+    .btn-secondary:hover:not(:disabled) { background: #e4e4e4; }
+
+    .meta-row {
+      margin-top: 0.6rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      font-size: 0.8rem;
+      color: var(--muted);
+      flex-wrap: wrap;
+    }
+    #k-select { padding: 2px 6px; border-radius: 5px; border: 1px solid #ccc; font-size: 0.8rem; }
+
+    .status-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #aaa;
+      margin-right: 4px;
+      vertical-align: middle;
+    }
+    .status-dot.ok { background: var(--success); }
+    .status-dot.indexing { background: var(--warning); animation: pulse 1s infinite; }
+    .status-dot.error { background: var(--danger); }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.35} }
+
+    .index-banner {
+      background: #fff8e1;
+      border: 1px solid #ffe082;
+      border-radius: 8px;
+      padding: 0.6rem 1rem;
+      margin-top: 0.65rem;
+      font-size: 0.82rem;
+      display: none;
+      max-width: 860px;
+    }
+
+    /* ── Results ─────────────────────────────── */
+    .results-section {
+      max-width: 900px;
+      margin: 1.5rem auto;
+      padding: 0 1.5rem;
+    }
+    .results-header { font-size: 0.82rem; color: var(--muted); margin-bottom: 1rem; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.3rem;
+      margin-bottom: 0.75rem;
+      transition: box-shadow 0.15s;
+    }
+    .card:hover { box-shadow: 0 3px 12px rgba(0,0,0,0.08); }
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+    .card-subject { font-size: 0.97rem; font-weight: 600; flex: 1; }
+    .rank-chip {
+      display: inline-block;
+      background: #eef2ff;
+      color: #4a5568;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      margin-right: 5px;
+    }
+    .score-badge {
+      font-size: 0.75rem; font-weight: 700;
+      padding: 2px 8px; border-radius: 99px; white-space: nowrap; flex-shrink: 0;
+    }
+    .score-high { background: #d4edda; color: #155724; }
+    .score-mid  { background: #fff3cd; color: #856404; }
+    .score-low  { background: #f8d7da; color: #721c24; }
+    .card-meta { font-size: 0.78rem; color: var(--muted); margin-top: 0.3rem; }
+    .card-meta span { margin-right: 1rem; }
+    .card-snippet { font-size: 0.86rem; color: #444; margin-top: 0.5rem; line-height: 1.5; }
+
+    .empty-state { text-align: center; padding: 3rem 0; color: var(--muted); }
+    .empty-state h2 { font-size: 1.05rem; margin-bottom: 0.4rem; color: var(--text); }
+
+    .spinner {
+      display: inline-block;
+      width: 16px; height: 16px;
+      border: 2px solid #ddd;
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+      vertical-align: middle;
+      margin-right: 5px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Email Semantic Search</h1>
+    <span class="badge">local</span>
+  </div>
+  <div id="header-user" style="display:none" class="user-chip">
+    <img id="user-avatar" src="" alt="" />
+    <span id="user-name"></span>
+    <a href="/auth/logout" class="btn-ghost">Sign out</a>
+  </div>
+</header>
+
+<!-- Sign-in landing -->
+<div id="landing">
+  <div class="landing-card">
+    <div class="landing-icon">📬</div>
+    <h2>Search your inbox</h2>
+    <p>Connect your Gmail account to index your emails and search them with natural language — everything runs locally.</p>
+    <a href="/auth/login" class="btn-google">
+      <!-- Google logo SVG -->
+      <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844c-.209 1.125-.843 2.078-1.796 2.717v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.615z" fill="#4285F4"/>
+        <path d="M9 18c2.43 0 4.467-.806 5.956-2.184l-2.908-2.258c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18z" fill="#34A853"/>
+        <path d="M3.964 10.707A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.707V4.961H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.039l3.007-2.332z" fill="#FBBC05"/>
+        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.961L3.964 7.293C4.672 5.163 6.656 3.58 9 3.58z" fill="#EA4335"/>
+      </svg>
+      Sign in with Google
+    </a>
+  </div>
+</div>
+
+<!-- Main app (shown after sign-in) -->
+<div id="app">
+  <div class="search-section">
+    <div class="search-row">
+      <input id="query" type="text" placeholder='e.g. "budget approval request" or "flight confirmation"' autocomplete="off" />
+      <button id="search-btn" class="btn-primary">Search</button>
+      <button id="index-btn" class="btn-secondary">↻ Re-index</button>
+    </div>
+    <div class="meta-row">
+      <span>Results: <select id="k-select"><option value="5">5</option><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option></select></span>
+      <span id="stats-text">Loading…</span>
+      <span><span class="status-dot" id="status-dot"></span><span id="status-label">–</span></span>
+    </div>
+    <div class="index-banner" id="index-banner">
+      <span class="spinner"></span> Indexing your emails in the background…
+    </div>
+  </div>
+
+  <div class="results-section" id="results-section">
+    <div class="empty-state">
+      <h2>Ready to search</h2>
+      <p>Type a natural language query above, or click <strong>↻ Re-index</strong> to fetch your latest emails.</p>
+    </div>
+  </div>
+</div>
+
+<script>
+  const landing = document.getElementById('landing');
+  const appDiv = document.getElementById('app');
+  const headerUser = document.getElementById('header-user');
+  const userAvatar = document.getElementById('user-avatar');
+  const userName = document.getElementById('user-name');
+
+  const queryInput = document.getElementById('query');
+  const searchBtn = document.getElementById('search-btn');
+  const indexBtn = document.getElementById('index-btn');
+  const resultsSection = document.getElementById('results-section');
+  const statsText = document.getElementById('stats-text');
+  const statusDot = document.getElementById('status-dot');
+  const statusLabel = document.getElementById('status-label');
+  const indexBanner = document.getElementById('index-banner');
+  const kSelect = document.getElementById('k-select');
+
+  // ── Bootstrap ─────────────────────────────────────────────────────────────
+  async function init() {
+    try {
+      const r = await fetch('/auth/me');
+      const d = await r.json();
+      if (d.authenticated) {
+        showApp(d.user);
+      } else {
+        showLanding();
+      }
+    } catch {
+      showLanding();
+    }
+  }
+
+  function showLanding() {
+    landing.style.display = 'flex';
+    appDiv.style.display = 'none';
+    headerUser.style.display = 'none';
+  }
+
+  function showApp(user) {
+    landing.style.display = 'none';
+    appDiv.style.display = 'block';
+    headerUser.style.display = 'flex';
+    if (user.picture) { userAvatar.src = user.picture; userAvatar.style.display = 'block'; }
+    else { userAvatar.style.display = 'none'; }
+    userName.textContent = user.name || user.email;
+    fetchStats();
+    pollIndexStatus();
+  }
+
+  // ── Stats ──────────────────────────────────────────────────────────────────
+  async function fetchStats() {
+    try {
+      const r = await fetch('/stats');
+      if (!r.ok) throw new Error();
+      const d = await r.json();
+      const count = d.indexed_count ?? 0;
+      const sync = d.last_sync ? ' · synced ' + new Date(d.last_sync).toLocaleString() : '';
+      statsText.textContent = `${count} email${count !== 1 ? 's' : ''} indexed${sync}`;
+    } catch {
+      statsText.textContent = 'Could not load stats';
+    }
+  }
+
+  // ── Index status polling ───────────────────────────────────────────────────
+  async function pollIndexStatus() {
+    try {
+      const r = await fetch('/index/status');
+      const d = await r.json();
+      if (d.running) {
+        statusDot.className = 'status-dot indexing';
+        statusLabel.textContent = 'Indexing…';
+        indexBanner.style.display = 'block';
+        indexBtn.disabled = true;
+        setTimeout(pollIndexStatus, 3000);
+      } else {
+        indexBanner.style.display = 'none';
+        indexBtn.disabled = false;
+        if (d.error) {
+          statusDot.className = 'status-dot error';
+          statusLabel.textContent = 'Error: ' + d.error;
+        } else if (d.result) {
+          statusDot.className = 'status-dot ok';
+          statusLabel.textContent = `Done · +${d.result.new} new`;
+          fetchStats();
+        } else {
+          statusDot.className = 'status-dot ok';
+          statusLabel.textContent = 'Ready';
+        }
+      }
+    } catch {
+      statusDot.className = 'status-dot';
+      statusLabel.textContent = 'Unknown';
+    }
+  }
+
+  // ── Indexing trigger ───────────────────────────────────────────────────────
+  async function triggerIndex() {
+    indexBtn.disabled = true;
+    const r = await fetch('/index', { method: 'POST' });
+    const d = await r.json();
+    if (d.status === 'started' || d.status === 'already_running') {
+      indexBanner.style.display = 'block';
+      pollIndexStatus();
+    }
+  }
+
+  // ── Search ─────────────────────────────────────────────────────────────────
+  function scoreClass(s) {
+    return s >= 0.6 ? 'score-high' : s >= 0.35 ? 'score-mid' : 'score-low';
+  }
+
+  function fmtDate(str) {
+    if (!str) return '';
+    try { return new Date(str).toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' }); }
+    catch { return str; }
+  }
+
+  function esc(str) {
+    return String(str)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function renderResults(data) {
+    if (!data.results?.length) {
+      resultsSection.innerHTML = `<div class="empty-state"><h2>No results found</h2><p>Try a different query or index more emails.</p></div>`;
+      return;
+    }
+    const header = `<div class="results-header">${data.results.length} results for <strong>"${esc(data.query)}"</strong></div>`;
+    const cards = data.results.map(r => `
+      <div class="card">
+        <div class="card-top">
+          <div class="card-subject"><span class="rank-chip">#${r.rank}</span>${esc(r.subject || '(no subject)')}</div>
+          <span class="score-badge ${scoreClass(r.score)}">${(r.score * 100).toFixed(0)}%</span>
+        </div>
+        <div class="card-meta">
+          <span>✉ ${esc(r.sender)}</span>
+          <span>📅 ${fmtDate(r.date)}</span>
+        </div>
+        <div class="card-snippet">${esc(r.snippet)}</div>
+      </div>`).join('');
+    resultsSection.innerHTML = header + cards;
+  }
+
+  async function doSearch() {
+    const q = queryInput.value.trim();
+    if (!q) return;
+    searchBtn.disabled = true;
+    searchBtn.innerHTML = '<span class="spinner"></span>Searching…';
+    try {
+      const r = await fetch(`/search?q=${encodeURIComponent(q)}&k=${kSelect.value}`);
+      if (r.status === 401) {
+        showLanding();
+        return;
+      }
+      if (!r.ok) {
+        const err = await r.json();
+        resultsSection.innerHTML = `<div class="empty-state"><h2>Error</h2><p>${esc(err.detail)}</p></div>`;
+        return;
+      }
+      renderResults(await r.json());
+    } catch (e) {
+      resultsSection.innerHTML = `<div class="empty-state"><h2>Request failed</h2><p>${e.message}</p></div>`;
+    } finally {
+      searchBtn.disabled = false;
+      searchBtn.textContent = 'Search';
+    }
+  }
+
+  // ── Event listeners ────────────────────────────────────────────────────────
+  searchBtn.addEventListener('click', doSearch);
+  queryInput.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+  indexBtn.addEventListener('click', triggerIndex);
+
+  init();
+</script>
+</body>
+</html>
