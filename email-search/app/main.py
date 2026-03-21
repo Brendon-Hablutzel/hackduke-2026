@@ -21,6 +21,7 @@ from app.auth import (
 from app.config import config
 from app.indexer import load_stats, run_indexing
 from app.search import search
+from app.todos import get_todos
 from app.vectordb import collection_count
 
 logging.basicConfig(level=config.LOG_LEVEL)
@@ -171,6 +172,22 @@ async def trigger_index(
 async def index_status(request: Request):
     user = _get_user_or_401(request)
     return _indexing.get(user["sub"], {"running": False, "result": None, "error": None})
+
+
+@app.get("/todos")
+async def todos(
+    request: Request,
+    n: int = Query(default=20, ge=1, le=200),
+):
+    user = _get_user_or_401(request)
+    try:
+        items = get_todos(user_sub=user["sub"], n=n)
+        return {"n": n, "items": items}
+    except ConnectionError as e:
+        raise HTTPException(status_code=503, detail=str(e))
+    except Exception as e:
+        logger.exception("Todos failed")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/search")
