@@ -1,11 +1,14 @@
 """FastAPI application with Google OAuth 2.0 sign-in."""
 
 import logging
+import mimetypes
 from pathlib import Path
 from typing import Optional
 
+import httpx
+
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
@@ -104,6 +107,45 @@ async def auth_me(request: Request):
     if not user:
         return {"authenticated": False}
     return {"authenticated": True, "user": user}
+
+
+_avatar_cache_dir = Path(config.DATA_DIR) / "avatars"
+
+
+@app.get("/auth/avatar")
+async def auth_avatar(request: Request):
+    """Serve the user's profile picture, cached locally to avoid Google rate limits."""
+    user = _get_user_or_401(request)
+    picture_url = user.get("picture", "")
+    if not picture_url:
+        raise HTTPException(status_code=404, detail="No profile picture")
+
+    user_sub = user["sub"]
+    _avatar_cache_dir.mkdir(parents=True, exist_ok=True)
+
+    # Check for an already-cached file (any extension)
+    cached = next(_avatar_cache_dir.glob(f"{user_sub}.*"), None)
+    if cached:
+        content_type = mimetypes.guess_type(cached.name)[0] or "image/jpeg"
+        return Response(content=cached.read_bytes(), media_type=content_type,
+                        headers={"Cache-Control": "public, max-age=86400"})
+
+    # Download from Google and cache
+    async with httpx.AsyncClient() as client:
+        r = await client.get(picture_url, timeout=10, follow_redirects=True)
+        r.raise_for_status()
+
+    content_type = r.headers.get("content-type", "image/jpeg").split(";")[0].strip()
+    ext = mimetypes.guess_extension(content_type) or ".jpg"
+    # mimetypes sometimes returns .jpe / .jpeg — normalise
+    if ext in (".jpe", ".jpeg"):
+        ext = ".jpg"
+
+    cache_path = _avatar_cache_dir / f"{user_sub}{ext}"
+    cache_path.write_bytes(r.content)
+
+    return Response(content=r.content, media_type=content_type,
+                    headers={"Cache-Control": "public, max-age=86400"})
 
 
 # ---------------------------------------------------------------------------

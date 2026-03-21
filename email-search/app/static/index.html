@@ -529,7 +529,7 @@
     appDiv.style.display = 'block';
     headerUser.style.display = 'flex';
     todoToggleBtn.style.display = 'inline-flex';
-    if (user.picture) { userAvatar.src = user.picture; userAvatar.style.display = 'block'; }
+    if (user.picture) { userAvatar.src = '/auth/avatar'; userAvatar.style.display = 'block'; }
     else { userAvatar.style.display = 'none'; }
     userName.textContent = user.name || user.email;
     fetchStats();
