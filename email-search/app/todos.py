@@ -147,7 +147,7 @@ def get_parsed_todos(user_sub: str, n: int = 20) -> List[dict]:
             cached = get_cached(user_sub, gmail_id)
             if cached:
                 logger.debug("Cache hit for email %s", gmail_id)
-                parsed.append({k: cached[k] for k in ("title", "details", "due_date", "location", "priority", "sender", "date", "gmail_url")})
+                parsed.append({k: cached[k] for k in ("title", "details", "due_date", "location", "priority", "sender", "date", "gmail_url", "gmail_message_id", "done")})
                 continue
 
         if gemini_calls > 0:
@@ -175,6 +175,8 @@ def get_parsed_todos(user_sub: str, n: int = 20) -> List[dict]:
             "sender": m.get("sender", ""),
             "date": m.get("date", ""),
             "gmail_url": f"https://mail.google.com/mail/u/0/#inbox/{gmail_id}" if gmail_id else None,
+            "gmail_message_id": gmail_id,
+            "done": False,
         }
 
         if gmail_id:

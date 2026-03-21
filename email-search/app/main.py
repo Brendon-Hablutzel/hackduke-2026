@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, Response
 from starlette.middleware.sessions import SessionMiddleware
 
-from app.todo_cache import init_db as init_todo_cache
+from app.todo_cache import init_db as init_todo_cache, mark_done as mark_todo_done
 from app.auth import (
     clear_session,
     fetch_user_info,
@@ -226,6 +226,15 @@ async def todos(
     except Exception as e:
         logger.exception("Todos failed")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/todos/{gmail_message_id}/done")
+async def mark_todo_done_endpoint(gmail_message_id: str, request: Request):
+    user = _get_user_or_401(request)
+    updated = mark_todo_done(user["sub"], gmail_message_id)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Todo not found")
+    return {"status": "ok"}
 
 
 @app.get("/api/search")
