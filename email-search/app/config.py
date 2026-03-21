@@ -7,7 +7,8 @@ load_dotenv()
 class Config:
     # App
     SECRET_KEY: str = os.getenv("SECRET_KEY", "change-me-to-a-long-random-string")
-    APP_BASE_URL: str = os.getenv("APP_BASE_URL", "http://localhost:8000").rstrip("/")
+    APP_BASE_URL: str = os.getenv("APP_BASE_URL", "http://localhost:5173").rstrip("/")
+    CORS_ORIGINS: list[str] = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
     LOG_LEVEL: str = os.getenv("LOG_LEVEL", "INFO")
 
     # Gmail

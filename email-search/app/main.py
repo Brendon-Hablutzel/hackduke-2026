@@ -10,6 +10,8 @@ import httpx
 from fastapi import BackgroundTasks, FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from starlette.middleware.sessions import SessionMiddleware
 
 from app.auth import (
@@ -31,10 +33,14 @@ logging.basicConfig(level=config.LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
 app = FastAPI(title="Email Semantic Search", version="2.0.0")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=config.CORS_ORIGINS,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.add_middleware(SessionMiddleware, secret_key=config.SECRET_KEY, max_age=60 * 60 * 24 * 30)
-
-_static_dir = Path(__file__).parent / "static"
-app.mount("/static", StaticFiles(directory=str(_static_dir)), name="static")
 
 # Per-user background indexing state
 _indexing: dict[str, dict] = {}
@@ -151,11 +157,6 @@ async def auth_avatar(request: Request):
 # ---------------------------------------------------------------------------
 # App routes
 # ---------------------------------------------------------------------------
-
-@app.get("/", response_class=HTMLResponse)
-async def root():
-    return HTMLResponse((_static_dir / "index.html").read_text())
-
 
 @app.get("/health")
 async def health(request: Request):
