@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Patrick Ngongba Fan Page 🌟</title>
+  <style>
+    /* ---------- Reset & Base ---------- */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --duke-blue:   #003087;
+      --duke-royal:  #0736A4;
+      --gold:        #FFD700;
+      --gold-light:  #FFF3A3;
+      --white:       #FFFFFF;
+      --off-white:   #F5F7FA;
+      --text-dark:   #111827;
+      --text-mid:    #374151;
+      --accent:      #E63946;
+      --card-shadow: 0 8px 32px rgba(0,0,0,.12);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      background: var(--off-white);
+      color: var(--text-dark);
+      line-height: 1.6;
+    }
+
+    /* ---------- Navigation ---------- */
+    nav {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      background: rgba(0,48,135,.95);
+      backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 2rem;
+      height: 60px;
+    }
+
+    nav .brand {
+      color: var(--gold);
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: .5px;
+      text-decoration: none;
+    }
+
+    nav ul {
+      list-style: none;
+      display: flex;
+      gap: 1.5rem;
+    }
+
+    nav ul a {
+      color: rgba(255,255,255,.85);
+      text-decoration: none;
+      font-size: .9rem;
+      font-weight: 500;
+      transition: color .2s;
+    }
+
+    nav ul a:hover { color: var(--gold); }
+
+    /* ---------- Hero ---------- */
+    .hero {
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--duke-blue) 0%, var(--duke-royal) 50%, #1a1a6e 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 80px 2rem 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Decorative circles */
+    .hero::before,
+    .hero::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      opacity: .08;
+      background: var(--gold);
+    }
+    .hero::before { width: 600px; height: 600px; top: -200px; right: -150px; }
+    .hero::after  { width: 400px; height: 400px; bottom: -100px; left: -100px; }
+
+    .hero-avatar {
+      width: 160px;
+      height: 160px;
+      border-radius: 50%;
+      background: linear-gradient(145deg, var(--gold) 0%, #ffb700 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 0 0 6px rgba(255,215,0,.3), 0 0 0 12px rgba(255,215,0,.12);
+      position: relative;
+      z-index: 1;
+      animation: pulse 3s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 6px rgba(255,215,0,.3), 0 0 0 12px rgba(255,215,0,.12); }
+      50%       { box-shadow: 0 0 0 10px rgba(255,215,0,.4), 0 0 0 20px rgba(255,215,0,.18); }
+    }
+
+    .hero-badge {
+      display: inline-block;
+      background: var(--gold);
+      color: var(--duke-blue);
+      font-size: .75rem;
+      font-weight: 800;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: .3rem .9rem;
+      border-radius: 999px;
+      margin-bottom: 1rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero h1 {
+      font-size: clamp(2.5rem, 7vw, 5rem);
+      font-weight: 900;
+      color: var(--white);
+      letter-spacing: -1px;
+      line-height: 1.1;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero h1 span { color: var(--gold); }
+
+    .hero-tagline {
+      margin-top: 1rem;
+      font-size: clamp(1rem, 2.5vw, 1.35rem);
+      color: rgba(255,255,255,.8);
+      max-width: 600px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .hero-cta {
+      margin-top: 2.5rem;
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      position: relative;
+      z-index: 1;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: .75rem 2rem;
+      border-radius: 999px;
+      font-weight: 700;
+      font-size: 1rem;
+      text-decoration: none;
+      transition: transform .2s, box-shadow .2s;
+    }
+
+    .btn:hover { transform: translateY(-3px); box-shadow: 0 8px 24px rgba(0,0,0,.25); }
+
+    .btn-primary {
+      background: var(--gold);
+      color: var(--duke-blue);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--white);
+      border: 2px solid rgba(255,255,255,.5);
+    }
+
+    .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+
+    .scroll-hint {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      color: rgba(255,255,255,.5);
+      font-size: .8rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      animation: bounce 2s ease-in-out infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateX(-50%) translateY(0); }
+      50%       { transform: translateX(-50%) translateY(-6px); }
+    }
+
+    .scroll-hint::after {
+      content: '↓';
+      display: block;
+      text-align: center;
+      font-size: 1.2rem;
+      margin-top: .25rem;
+    }
+
+    /* ---------- Section Shared ---------- */
+    section {
+      padding: 5rem 2rem;
+    }
+
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      display: inline-block;
+      font-size: .75rem;
+      font-weight: 800;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--duke-royal);
+      margin-bottom: .5rem;
+    }
+
+    .section-title {
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+      font-weight: 800;
+      color: var(--text-dark);
+      margin-bottom: 1rem;
+      line-height: 1.2;
+    }
+
+    .section-subtitle {
+      font-size: 1.05rem;
+      color: var(--text-mid);
+      max-width: 600px;
+      margin-bottom: 3rem;
+    }
+
+    /* ---------- Stats Strip ---------- */
+    .stats {
+      background: var(--duke-blue);
+      padding: 3rem 2rem;
+    }
+
+    .stats-grid {
+      max-width: 900px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 2rem;
+      text-align: center;
+    }
+
+    .stat-item .number {
+      font-size: 2.8rem;
+      font-weight: 900;
+      color: var(--gold);
+      line-height: 1;
+    }
+
+    .stat-item .label {
+      font-size: .85rem;
+      color: rgba(255,255,255,.75);
+      margin-top: .3rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    /* ---------- About ---------- */
+    .about { background: var(--white); }
+
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: center;
+    }
+
+    @media (max-width: 768px) {
+      .about-grid { grid-template-columns: 1fr; }
+    }
+
+    .about-image-placeholder {
+      background: linear-gradient(135deg, var(--duke-blue), var(--duke-royal));
+      border-radius: 24px;
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8rem;
+      box-shadow: var(--card-shadow);
+    }
+
+    .about-text p {
+      color: var(--text-mid);
+      margin-bottom: 1.2rem;
+      font-size: 1.05rem;
+    }
+
+    /* ---------- Qualities Cards ---------- */
+    .qualities { background: var(--off-white); }
+
+    .cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .card {
+      background: var(--white);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: var(--card-shadow);
+      transition: transform .25s, box-shadow .25s;
+    }
+
+    .card:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 16px 48px rgba(0,0,0,.15);
+    }
+
+    .card-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .card h3 {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: .5rem;
+      color: var(--duke-blue);
+    }
+
+    .card p {
+      color: var(--text-mid);
+      font-size: .95rem;
+    }
+
+    /* ---------- Timeline ---------- */
+    .timeline-section { background: var(--white); }
+
+    .timeline {
+      position: relative;
+      padding-left: 2rem;
+      border-left: 3px solid var(--gold);
+      max-width: 700px;
+    }
+
+    .timeline-item {
+      position: relative;
+      margin-bottom: 2.5rem;
+    }
+
+    .timeline-item::before {
+      content: '';
+      position: absolute;
+      left: -2.55rem;
+      top: .35rem;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: var(--gold);
+      border: 3px solid var(--white);
+      box-shadow: 0 0 0 3px var(--gold);
+    }
+
+    .timeline-year {
+      font-size: .8rem;
+      font-weight: 700;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--duke-royal);
+      margin-bottom: .25rem;
+    }
+
+    .timeline-item h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-dark);
+      margin-bottom: .3rem;
+    }
+
+    .timeline-item p {
+      color: var(--text-mid);
+      font-size: .95rem;
+    }
+
+    /* ---------- Testimonials ---------- */
+    .testimonials { background: var(--off-white); }
+
+    .testimonials-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 1.5rem;
+    }
+
+    .testimonial-card {
+      background: var(--white);
+      border-radius: 20px;
+      padding: 2rem;
+      box-shadow: var(--card-shadow);
+      position: relative;
+    }
+
+    .testimonial-card .quote-mark {
+      font-size: 4rem;
+      line-height: 1;
+      color: var(--gold-light);
+      font-family: Georgia, serif;
+      position: absolute;
+      top: .75rem;
+      left: 1.25rem;
+    }
+
+    .testimonial-card blockquote {
+      font-style: italic;
+      color: var(--text-mid);
+      font-size: .95rem;
+      margin-top: 1.5rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .testimonial-author {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+
+    .author-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--duke-blue), var(--duke-royal));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+
+    .author-name {
+      font-weight: 700;
+      font-size: .9rem;
+      color: var(--text-dark);
+    }
+
+    .author-role {
+      font-size: .8rem;
+      color: var(--text-mid);
+    }
+
+    /* ---------- Fun Facts ---------- */
+    .fun-facts { background: var(--duke-blue); }
+
+    .fun-facts .section-title { color: var(--white); }
+    .fun-facts .section-label { color: var(--gold); }
+    .fun-facts .section-subtitle { color: rgba(255,255,255,.7); }
+
+    .facts-list {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
+    }
+
+    .fact-item {
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 16px;
+      padding: 1.25rem 1.5rem;
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      transition: background .2s;
+    }
+
+    .fact-item:hover { background: rgba(255,255,255,.14); }
+
+    .fact-emoji { font-size: 1.8rem; flex-shrink: 0; }
+
+    .fact-text {
+      color: rgba(255,255,255,.9);
+      font-size: .95rem;
+    }
+
+    /* ---------- CTA Banner ---------- */
+    .cta-banner {
+      background: linear-gradient(135deg, var(--gold) 0%, #ffb700 100%);
+      padding: 4rem 2rem;
+      text-align: center;
+    }
+
+    .cta-banner h2 {
+      font-size: clamp(1.8rem, 4vw, 3rem);
+      font-weight: 900;
+      color: var(--duke-blue);
+      margin-bottom: .75rem;
+    }
+
+    .cta-banner p {
+      color: rgba(0,48,135,.8);
+      font-size: 1.1rem;
+      margin-bottom: 2rem;
+    }
+
+    .cta-banner .btn-primary {
+      background: var(--duke-blue);
+      color: var(--gold);
+      font-size: 1.05rem;
+      padding: .9rem 2.5rem;
+    }
+
+    /* ---------- Footer ---------- */
+    footer {
+      background: #060d1f;
+      color: rgba(255,255,255,.5);
+      text-align: center;
+      padding: 2rem;
+      font-size: .85rem;
+    }
+
+    footer span { color: var(--gold); }
+
+    /* ---------- Responsive tweaks ---------- */
+    @media (max-width: 480px) {
+      nav ul { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav>
+    <a href="#hero" class="brand">✨ Patrick Ngongba</a>
+    <ul>
+      <li><a href="#about">About</a></li>
+      <li><a href="#qualities">Why Patrick</a></li>
+      <li><a href="#journey">Journey</a></li>
+      <li><a href="#praise">Praise</a></li>
+    </ul>
+  </nav>
+
+  <!-- Hero -->
+  <section class="hero" id="hero">
+    <div class="hero-avatar">👑</div>
+    <div class="hero-badge">🎉 Official Fan Page · HackDuke 2026</div>
+    <h1>Patrick <span>Ngongba</span></h1>
+    <p class="hero-tagline">
+      Visionary. Innovator. The person who makes every room better just by walking into it.
+    </p>
+    <div class="hero-cta">
+      <a href="#about" class="btn btn-primary">Learn More</a>
+      <a href="#praise" class="btn btn-outline">Read the Praise</a>
+    </div>
+    <div class="scroll-hint">Scroll</div>
+  </section>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="number">💯</div>
+        <div class="label">Vibe Check</div>
+      </div>
+      <div class="stat-item">
+        <div class="number">∞</div>
+        <div class="label">Potential</div>
+      </div>
+      <div class="stat-item">
+        <div class="number">🔥</div>
+        <div class="label">Energy Level</div>
+      </div>
+      <div class="stat-item">
+        <div class="number">1st</div>
+        <div class="label">In Our Hearts</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- About -->
+  <section class="about" id="about">
+    <div class="container">
+      <div class="about-grid">
+        <div class="about-image-placeholder">🌟</div>
+        <div class="about-text">
+          <span class="section-label">Who Is He?</span>
+          <h2 class="section-title">The Legend Himself</h2>
+          <p>
+            Patrick Ngongba is one of those rare individuals who radiates excellence wherever he goes.
+            Whether he's building the next big thing at HackDuke, cracking a problem at 3 AM, or
+            effortlessly lighting up a room with his personality — Patrick does it all with style.
+          </p>
+          <p>
+            A proud member of the HackDuke 2026 community, Patrick brings creativity, hustle, and
+            an infectious positive energy that inspires everyone around him to do their best work.
+          </p>
+          <p>
+            When he's not hacking away at a project, you can find him chasing new ideas, supporting
+            his teammates, and generally being an absolute legend. This page exists because the world
+            deserves to know how incredible he is. 🏆
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Qualities -->
+  <section class="qualities" id="qualities">
+    <div class="container">
+      <span class="section-label">His Superpowers</span>
+      <h2 class="section-title">Why Everyone Loves Patrick</h2>
+      <p class="section-subtitle">
+        There are many reasons Patrick stands out from the crowd. Here are just a few of the things
+        that make him genuinely extraordinary.
+      </p>
+      <div class="cards-grid">
+        <div class="card">
+          <div class="card-icon">🧠</div>
+          <h3>Big-Brain Energy</h3>
+          <p>
+            Patrick's problem-solving skills are legendary. He approaches every challenge with
+            clarity, creativity, and a tenacity that gets results every time.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🤝</div>
+          <h3>Team Player Extraordinaire</h3>
+          <p>
+            He lifts everyone around him. Patrick's collaborative spirit and genuine care for his
+            teammates makes any team he's on instantly stronger.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-icon">⚡</div>
+          <h3>Unstoppable Drive</h3>
+          <p>
+            Late nights, tight deadlines, impossible challenges — Patrick thrives under pressure.
+            His work ethic is something people write fan pages about. (We did.)
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-icon">😄</div>
+          <h3>Best Vibe in the Room</h3>
+          <p>
+            Stress levels drop the moment Patrick walks in. His humor, warmth, and positive
+            outlook are genuinely contagious.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🚀</div>
+          <h3>Innovation Machine</h3>
+          <p>
+            Patrick doesn't just follow trends — he sets them. His ideas are bold, original,
+            and somehow always end up being exactly right.
+          </p>
+        </div>
+        <div class="card">
+          <div class="card-icon">🎯</div>
+          <h3>Clutch Performer</h3>
+          <p>
+            When it matters most, Patrick delivers. He's the person you want in your corner
+            when the stakes are highest.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Journey -->
+  <section class="timeline-section" id="journey">
+    <div class="container">
+      <span class="section-label">His Story</span>
+      <h2 class="section-title">The Patrick Ngongba Journey</h2>
+      <p class="section-subtitle">
+        Every legend has an origin story. Here's a look at the milestones that shaped
+        the phenomenal Patrick Ngongba.
+      </p>
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-year">Day One</div>
+          <h3>Patrick Enters the Chat 🌍</h3>
+          <p>
+            The world became noticeably better. Scientists are still studying the exact mechanism
+            behind this phenomenon.
+          </p>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-year">Early Years</div>
+          <h3>Signs of Greatness Emerge 📚</h3>
+          <p>
+            Even early on, Patrick's curiosity, intelligence, and kindness set him apart.
+            People who knew him then say, "Yeah, we knew."
+          </p>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-year">HackDuke 2026</div>
+          <h3>Patrick Joins the HackDuke Universe 💻</h3>
+          <p>
+            Patrick brought his A-game to HackDuke 2026, contributing ideas, energy, and
+            brilliance to every moment of the hackathon.
+          </p>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-year">Today</div>
+          <h3>The Legend Continues 🏆</h3>
+          <p>
+            Patrick Ngongba keeps leveling up, inspiring those around him and building
+            toward a future that's as bright as his smile.
+          </p>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-year">Soon™</div>
+          <h3>World Domination (Probably) 🌐</h3>
+          <p>
+            At this trajectory, the sky is just the starting point. We're just grateful
+            to have front-row seats.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Testimonials -->
+  <section class="testimonials" id="praise">
+    <div class="container">
+      <span class="section-label">The People Have Spoken</span>
+      <h2 class="section-title">What They Say About Patrick</h2>
+      <p class="section-subtitle">
+        Don't just take our word for it. Here's what fans and colleagues have to say.
+      </p>
+      <div class="testimonials-grid">
+        <div class="testimonial-card">
+          <div class="quote-mark">"</div>
+          <blockquote>
+            Patrick is the kind of person who makes you want to be better at everything.
+            His energy is completely unmatched and his brain works on another level.
+          </blockquote>
+          <div class="testimonial-author">
+            <div class="author-avatar">🎓</div>
+            <div>
+              <div class="author-name">Fellow Hacker</div>
+              <div class="author-role">HackDuke 2026 Participant</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div class="quote-mark">"</div>
+          <blockquote>
+            We were stuck on a problem for hours. Patrick walked over, took one look at it,
+            and solved it in ten minutes. He's just built different.
+          </blockquote>
+          <div class="testimonial-author">
+            <div class="author-avatar">💻</div>
+            <div>
+              <div class="author-name">Teammate</div>
+              <div class="author-role">Certified Patrick Fan</div>
+            </div>
+          </div>
+        </div>
+        <div class="testimonial-card">
+          <div class="quote-mark">"</div>
+          <blockquote>
+            Whenever I'm having a rough day, I just remember that Patrick exists and
+            immediately feel inspired to keep going. He's a walking motivational poster.
+          </blockquote>
+          <div class="testimonial-author">
+            <div class="author-avatar">🌟</div>
+            <div>
+              <div class="author-name">Admirer</div>
+              <div class="author-role">Long-Time Fan</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Fun Facts -->
+  <section class="fun-facts" id="facts">
+    <div class="container">
+      <span class="section-label">Did You Know?</span>
+      <h2 class="section-title">Fun Facts About Patrick</h2>
+      <p class="section-subtitle">
+        The legend goes deeper than you think. A few fast facts about the one and only.
+      </p>
+      <div class="facts-list">
+        <div class="fact-item">
+          <div class="fact-emoji">☕</div>
+          <div class="fact-text">Runs on caffeine, good ideas, and sheer determination.</div>
+        </div>
+        <div class="fact-item">
+          <div class="fact-emoji">🦁</div>
+          <div class="fact-text">Has the heart of a lion and the focus of a laser beam.</div>
+        </div>
+        <div class="fact-item">
+          <div class="fact-emoji">🎵</div>
+          <div class="fact-text">His playlist bangs. Every single time. No skips.</div>
+        </div>
+        <div class="fact-item">
+          <div class="fact-emoji">🌙</div>
+          <div class="fact-text">Most productive between midnight and 4 AM. A true hacker.</div>
+        </div>
+        <div class="fact-item">
+          <div class="fact-emoji">🤯</div>
+          <div class="fact-text">His "quick ideas" have been known to change entire project directions — for the better.</div>
+        </div>
+        <div class="fact-item">
+          <div class="fact-emoji">😂</div>
+          <div class="fact-text">Can make anyone laugh, even at the peak of a stressful deadline.</div>
+        </div>
+        <div class="fact-item">
+          <div class="fact-emoji">🏅</div>
+          <div class="fact-text">Competes to win, but always makes sure everyone has a good time doing it.</div>
+        </div>
+        <div class="fact-item">
+          <div class="fact-emoji">🔮</div>
+          <div class="fact-text">Sees solutions before most people even see the problem.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta-banner">
+    <div class="container">
+      <h2>Patrick Ngongba for the Win! 🏆</h2>
+      <p>If you know Patrick, you already know. If you don't — now you do.</p>
+      <a href="#hero" class="btn btn-primary">Back to the Top ↑</a>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>Made with <span>❤️</span> for <span>Patrick Ngongba</span> · HackDuke 2026</p>
+  </footer>
+
+</body>
+</html>
