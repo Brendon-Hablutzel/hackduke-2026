@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, Response
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.todo_cache import init_db as init_todo_cache
 from app.auth import (
     clear_session,
     fetch_user_info,
@@ -23,11 +24,13 @@ from app.auth import (
 from app.config import config
 from app.indexer import load_stats, run_indexing
 from app.search import search
-from app.todos import get_todos
+from app.todos import get_parsed_todos
 from app.vectordb import collection_count
 
 logging.basicConfig(level=config.LOG_LEVEL)
 logger = logging.getLogger(__name__)
+
+init_todo_cache()
 
 app = FastAPI(title="Email Semantic Search", version="2.0.0")
 app.add_middleware(
@@ -150,7 +153,7 @@ async def auth_avatar(request: Request):
 # App routes
 # ---------------------------------------------------------------------------
 
-@app.get("/health")
+@app.get("/api/health")
 async def health(request: Request):
     user = get_current_user(request)
     count = 0
@@ -162,7 +165,7 @@ async def health(request: Request):
     return {"status": "ok", "indexed_emails": count}
 
 
-@app.get("/stats")
+@app.get("/api/stats")
 async def stats(request: Request):
     user = _get_user_or_401(request)
     data = load_stats(user["sub"])
@@ -173,7 +176,7 @@ async def stats(request: Request):
     return data
 
 
-@app.post("/index")
+@app.post("/api/index")
 async def trigger_index(
     request: Request,
     background_tasks: BackgroundTasks,
@@ -203,20 +206,20 @@ async def trigger_index(
     return {"status": "started", "max_emails": limit}
 
 
-@app.get("/index/status")
+@app.get("/api/index/status")
 async def index_status(request: Request):
     user = _get_user_or_401(request)
     return _indexing.get(user["sub"], {"running": False, "result": None, "error": None})
 
 
-@app.get("/todos")
+@app.get("/api/todos")
 async def todos(
     request: Request,
     n: int = Query(default=20, ge=1, le=200),
 ):
     user = _get_user_or_401(request)
     try:
-        items = get_todos(user_sub=user["sub"], n=n)
+        items = get_parsed_todos(user_sub=user["sub"], n=n)
         return {"n": n, "items": items}
     except ConnectionError as e:
         raise HTTPException(status_code=503, detail=str(e))
@@ -225,7 +228,7 @@ async def todos(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/search")
+@app.get("/api/search")
 async def search_emails(
     request: Request,
     q: str = Query(..., min_length=1),

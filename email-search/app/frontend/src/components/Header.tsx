@@ -1,28 +1,26 @@
+import { NavLink } from 'react-router-dom';
 import type { User } from '../api';
 
 interface Props {
   user: User | null;
-  onTodoToggle: () => void;
-  sidebarOpen: boolean;
 }
 
-export default function Header({ user, onTodoToggle, sidebarOpen }: Props) {
+export default function Header({ user }: Props) {
   return (
     <header>
       <div className="header-left">
-        <h1>Email Semantic Search</h1>
+        <NavLink to="/" className="header-logo">Email Semantic Search</NavLink>
         <span className="badge">local</span>
       </div>
       <div className="header-right">
         {user && (
           <>
-            <button
-              className="btn-ghost"
-              onClick={onTodoToggle}
-              style={{ opacity: sidebarOpen ? 0.6 : 1 }}
-            >
+            <NavLink to="/" end className="btn-ghost" style={({ isActive }) => ({ opacity: isActive ? 0.6 : 1 })}>
+              Search
+            </NavLink>
+            <NavLink to="/todos" className="btn-ghost" style={({ isActive }) => ({ opacity: isActive ? 0.6 : 1 })}>
               ☑ To-do
-            </button>
+            </NavLink>
             <div className="user-chip">
               {user.picture && <img src="/auth/avatar" alt="" />}
               <span>{user.name || user.email}</span>
