@@ -166,6 +166,17 @@
       flex-wrap: wrap;
     }
     #k-select { padding: 2px 6px; border-radius: 5px; border: 1px solid #ccc; font-size: 0.8rem; }
+    #max-emails-select {
+      padding: 0.65rem 0.75rem;
+      font-size: 0.88rem;
+      border: 1.5px solid #ddd;
+      border-radius: 8px;
+      background: #f9f9f9;
+      color: var(--text);
+      cursor: pointer;
+      outline: none;
+    }
+    #max-emails-select:focus { border-color: var(--accent); }
 
     .status-dot {
       display: inline-block;
@@ -286,6 +297,13 @@
     <div class="search-row">
       <input id="query" type="text" placeholder='e.g. "budget approval request" or "flight confirmation"' autocomplete="off" />
       <button id="search-btn" class="btn-primary">Search</button>
+      <select id="max-emails-select" title="Emails to index">
+        <option value="100">100 emails</option>
+        <option value="250">250 emails</option>
+        <option value="500" selected>500 emails</option>
+        <option value="1000">1,000 emails</option>
+        <option value="2000">2,000 emails</option>
+      </select>
       <button id="index-btn" class="btn-secondary">↻ Re-index</button>
     </div>
     <div class="meta-row">
@@ -404,7 +422,8 @@
   // ── Indexing trigger ───────────────────────────────────────────────────────
   async function triggerIndex() {
     indexBtn.disabled = true;
-    const r = await fetch('/index', { method: 'POST' });
+    const maxEmails = document.getElementById('max-emails-select').value;
+    const r = await fetch(`/index?max_emails=${maxEmails}`, { method: 'POST' });
     const d = await r.json();
     if (d.status === 'started' || d.status === 'already_running') {
       indexBanner.style.display = 'block';
