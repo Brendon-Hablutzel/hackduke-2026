@@ -1,11 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import type { User, SearchResult, IndexStatus, Stats, TodoItem, SearchFilters } from './api';
 import { getMe, getStats, getIndexStatus, triggerIndex, searchEmails, getTodos } from './api';
 import Header from './components/Header';
 import Landing from './components/Landing';
 import SearchSection from './components/SearchSection';
 import Results from './components/Results';
-import TodoSidebar from './components/TodoSidebar';
+import TodoPage from './components/TodoPage';
+
+function Layout({ user }: { user: User }) {
+  return (
+    <>
+      <Header user={user} />
+      <Outlet />
+    </>
+  );
+}
 
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
@@ -23,7 +33,6 @@ export default function App() {
   const [stats, setStats] = useState<Stats | null>(null);
   const [indexStatus, setIndexStatus] = useState<IndexStatus | null>(null);
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [todos, setTodos] = useState<TodoItem[] | null>(null);
   const [todosLoading, setTodosLoading] = useState(false);
   const [todosError, setTodosError] = useState<string | null>(null);
@@ -80,14 +89,6 @@ export default function App() {
     }
   }, []);
 
-  const toggleSidebar = useCallback(() => {
-    setSidebarOpen(prev => {
-      const next = !prev;
-      if (next) loadTodos(todoN);
-      return next;
-    });
-  }, [loadTodos, todoN]);
-
   const handleTodoNChange = (n: number) => {
     setTodoN(n);
     loadTodos(n);
@@ -122,44 +123,47 @@ export default function App() {
 
   if (!user) return (
     <>
-      <Header user={null} onTodoToggle={toggleSidebar} sidebarOpen={sidebarOpen} />
+      <Header user={null} />
       <Landing />
     </>
   );
 
   return (
-    <>
-      <Header user={user} onTodoToggle={toggleSidebar} sidebarOpen={sidebarOpen} />
-      <div className="app-body">
-        <div className={`main-content${sidebarOpen ? ' sidebar-open' : ''}`}>
-          <SearchSection
-            query={query}
-            onQueryChange={setQuery}
-            onSearch={doSearch}
-            searching={searching}
-            k={k}
-            onKChange={setK}
-            maxEmails={maxEmails}
-            onMaxEmailsChange={setMaxEmails}
-            onReindex={handleReindex}
-            stats={stats}
-            indexStatus={indexStatus}
-            filters={filters}
-            onFiltersChange={setFilters}
+    <Routes>
+      <Route element={<Layout user={user} />}>
+        <Route path="/" element={
+          <div className="main-content">
+            <SearchSection
+              query={query}
+              onQueryChange={setQuery}
+              onSearch={doSearch}
+              searching={searching}
+              k={k}
+              onKChange={setK}
+              maxEmails={maxEmails}
+              onMaxEmailsChange={setMaxEmails}
+              onReindex={handleReindex}
+              stats={stats}
+              indexStatus={indexStatus}
+              filters={filters}
+              onFiltersChange={setFilters}
+            />
+            <Results results={results} query={lastQuery} error={searchError} />
+          </div>
+        } />
+        <Route path="/todos" element={
+          <TodoPage
+            todos={todos}
+            loading={todosLoading}
+            error={todosError}
+            todoN={todoN}
+            onTodoNChange={handleTodoNChange}
+            onRefresh={() => loadTodos(todoN)}
+            onMount={() => { if (todos === null) loadTodos(todoN); }}
           />
-          <Results results={results} query={lastQuery} error={searchError} />
-        </div>
-        <TodoSidebar
-          open={sidebarOpen}
-          onClose={toggleSidebar}
-          todos={todos}
-          loading={todosLoading}
-          error={todosError}
-          todoN={todoN}
-          onTodoNChange={handleTodoNChange}
-          onRefresh={() => loadTodos(todoN)}
-        />
-      </div>
-    </>
+        } />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+    </Routes>
   );
 }

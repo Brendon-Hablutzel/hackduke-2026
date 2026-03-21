@@ -7,11 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/auth': 'http://localhost:8000',
-      '/search': 'http://localhost:8000',
-      '/index': 'http://localhost:8000',
-      '/stats': 'http://localhost:8000',
-      '/todos': 'http://localhost:8000',
-      '/health': 'http://localhost:8000',
+      '/api': 'http://localhost:8000',
     },
   },
 })
