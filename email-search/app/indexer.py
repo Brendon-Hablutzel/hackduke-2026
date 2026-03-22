@@ -79,6 +79,7 @@ def run_indexing(
             "date": email["date"][:100],
             "snippet": email["snippet"][:500],
             "labels": json.dumps(email["labels"]),
+            "has_attachment": 1 if email.get("has_attachment") else 0,
         })
 
         if len(batch_texts) >= _BATCH_SIZE:

@@ -13,13 +13,19 @@ export interface Inbox {
   is_primary: boolean;
   added_at: string;
 }
+export interface SearchFilters {
+  from: string;
+  hasAttachment: boolean;
+}
 
 export interface SearchResult {
   rank: number;
+  thread_id: string;
   subject: string;
   sender: string;
   date: string;
   snippet: string;
+  has_attachment: boolean;
   score: number;
   inbox_id?: string;
   inbox_email?: string;
@@ -37,20 +43,16 @@ export interface Stats {
 }
 
 export interface TodoItem {
-  subject: string;
+  gmail_message_id: string;
+  title: string;
+  details: string;
+  due_date: string | null;
+  location: string | null;
+  priority: 'high' | 'medium' | 'low';
   sender: string;
   date: string;
-  snippet: string;
-  action?: string;
-  deadline_text?: string;
-  deadline_date?: string;
-}
-
-export interface TodoBuckets {
-  next_24h: TodoItem[];
-  next_week: TodoItem[];
-  undated: TodoItem[];
-  total: number;
+  gmail_url: string | null;
+  done: boolean;
 }
 
 export async function getMe(): Promise<{ authenticated: false } | { authenticated: true; user: User }> {
@@ -59,61 +61,76 @@ export async function getMe(): Promise<{ authenticated: false } | { authenticate
 }
 
 export async function getStats(inboxIds?: string): Promise<Stats> {
-  const url = inboxIds ? `/stats?inbox_ids=${encodeURIComponent(inboxIds)}` : '/stats';
+  const url = inboxIds ? `/api/stats?inbox_ids=${encodeURIComponent(inboxIds)}` : '/api/stats';
   const r = await fetch(url);
   if (!r.ok) throw new Error('Failed to load stats');
   return r.json();
 }
 
 export async function getIndexStatus(): Promise<IndexStatus> {
-  const r = await fetch('/index/status');
+  const r = await fetch('/api/index/status');
   return r.json();
 }
 
 export async function triggerIndex(maxEmails: number, inboxId?: string): Promise<{ status: string; inbox_id?: string }> {
   const params = new URLSearchParams({ max_emails: String(maxEmails) });
   if (inboxId) params.set('inbox_id', inboxId);
-  const r = await fetch(`/index?${params}`, { method: 'POST' });
+  const r = await fetch(`/api/index?${params}`, { method: 'POST' });
   if (!r.ok) {
     const err = await r.json().catch(() => ({}));
-    throw new Error(err.detail ?? `Index failed (${r.status})`);
+    throw new Error((err as any).detail ?? `Index failed (${r.status})`);
   }
   return r.json();
 }
 
-export async function searchEmails(q: string, k: number, inboxIds?: string): Promise<{ query: string; results: SearchResult[] }> {
+export async function searchEmails(
+  q: string,
+  k: number,
+  filters: SearchFilters,
+  inboxIds?: string,
+): Promise<{ query: string; results: SearchResult[] }> {
   const params = new URLSearchParams({ q, k: String(k) });
+  if (filters.from) params.set('from_filter', filters.from);
+  if (filters.hasAttachment) params.set('has_attachment', 'true');
   if (inboxIds) params.set('inbox_ids', inboxIds);
-  const r = await fetch(`/search?${params}`);
+  const r = await fetch(`/api/search?${params}`);
   if (!r.ok) {
     const err = await r.json();
-    throw new Error(err.detail ?? 'Search failed');
+    throw new Error((err as any).detail ?? 'Search failed');
   }
   return r.json();
 }
 
-export async function getTodos(days: number, inboxIds?: string): Promise<TodoBuckets> {
-  const params = new URLSearchParams({ days: String(days) });
+export async function markTodoDone(gmailMessageId: string): Promise<void> {
+  const r = await fetch(`/api/todos/${encodeURIComponent(gmailMessageId)}/done`, { method: 'POST' });
+  if (!r.ok) {
+    const err = await r.json();
+    throw new Error((err as any).detail ?? 'Failed to mark todo as done');
+  }
+}
+
+export async function getTodos(n: number, inboxIds?: string): Promise<{ items: TodoItem[] }> {
+  const params = new URLSearchParams({ n: String(n) });
   if (inboxIds) params.set('inbox_ids', inboxIds);
-  const r = await fetch(`/todos?${params}`);
+  const r = await fetch(`/api/todos?${params}`);
   if (r.status === 401) throw Object.assign(new Error('Unauthenticated'), { status: 401 });
   if (!r.ok) {
     const err = await r.json();
-    throw new Error(err.detail ?? 'Failed to load todos');
+    throw new Error((err as any).detail ?? 'Failed to load todos');
   }
   return r.json();
 }
 
 export async function getInboxes(): Promise<{ inboxes: Inbox[] }> {
-  const r = await fetch('/inboxes');
+  const r = await fetch('/api/inboxes');
   if (!r.ok) throw new Error('Failed to load inboxes');
   return r.json();
 }
 
 export async function removeInbox(inboxId: string): Promise<void> {
-  await fetch(`/inboxes/${encodeURIComponent(inboxId)}`, { method: 'DELETE' });
+  await fetch(`/api/inboxes/${encodeURIComponent(inboxId)}`, { method: 'DELETE' });
 }
 
 export async function setPrimaryInbox(inboxId: string): Promise<void> {
-  await fetch(`/inboxes/${encodeURIComponent(inboxId)}/primary`, { method: 'POST' });
+  await fetch(`/api/inboxes/${encodeURIComponent(inboxId)}/primary`, { method: 'POST' });
 }

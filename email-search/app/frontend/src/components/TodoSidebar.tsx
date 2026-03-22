@@ -1,17 +1,17 @@
-import type { TodoBuckets, TodoItem } from '../api';
+import type { TodoItem } from '../api';
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  buckets: TodoBuckets | null;
+  todos: TodoItem[] | null;
   loading: boolean;
   error: string | null;
-  todoDays: number;
-  onTodoDaysChange: (days: number) => void;
+  todoN: number;
+  onTodoNChange: (n: number) => void;
   onRefresh: () => void;
 }
 
-function fmtDate(str: string): string {
+function fmtDate(str: string | null): string {
   if (!str) return '';
   try {
     return new Date(str).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
@@ -20,82 +20,56 @@ function fmtDate(str: string): string {
   }
 }
 
-function TodoItemCard({ item }: { item: TodoItem }) {
-  return (
-    <div className="todo-item">
-      {item.deadline_text && (
-        <div className="todo-deadline">📅 {item.deadline_text}</div>
-      )}
-      {item.action && (
-        <div className="todo-action">{item.action}</div>
-      )}
-      <div className="todo-subject">{item.subject || '(no subject)'}</div>
-      <div className="todo-meta">
-        ✉ {item.sender}{item.date ? ` · ${fmtDate(item.date)}` : ''}
-      </div>
-      {item.snippet && <div className="todo-snippet">{item.snippet}</div>}
-    </div>
-  );
-}
-
-export default function TodoSidebar({ open, onClose, buckets, loading, error, todoDays, onTodoDaysChange, onRefresh }: Props) {
-  const hasItems = buckets && (
-    buckets.next_24h.length + buckets.next_week.length + buckets.undated.length > 0
-  );
+export default function TodoSidebar({ open, onClose, todos, loading, error, todoN, onTodoNChange, onRefresh }: Props) {
+  const hasItems = todos && todos.length > 0;
 
   return (
     <aside className={`todo-sidebar${open ? ' open' : ''}`}>
       <div className="sidebar-header">
         <div className="sidebar-header-top">
-          <span className="sidebar-title">☑ To-do</span>
+          <span className="sidebar-title">☑ Action Needed</span>
           <button className="sidebar-close" onClick={onClose} title="Close">✕</button>
         </div>
         <div className="sidebar-controls">
-          <span>Window:</span>
-          <select value={todoDays} onChange={e => onTodoDaysChange(Number(e.target.value))}>
-            <option value={7}>7 days</option>
-            <option value={14}>14 days</option>
-            <option value={30}>30 days</option>
+          <span>Show:</span>
+          <select value={todoN} onChange={e => onTodoNChange(Number(e.target.value))}>
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={20}>20</option>
           </select>
           <button className="sidebar-refresh" onClick={onRefresh}>↻ Refresh</button>
         </div>
       </div>
       <div className="sidebar-body">
         {loading && (
-          <div className="sidebar-loading"><span className="spinner" /> Loading…</div>
+          <div className="sidebar-loading"><span className="spinner" /> Parsing emails…</div>
         )}
         {!loading && error && (
           <div className="sidebar-empty">Error: {error}</div>
         )}
-        {!loading && !error && buckets !== null && !hasItems && (
-          <div className="sidebar-empty">
-            {buckets.total === 0
-              ? <>No action items found.<br /><br />Try indexing more emails first.</>
-              : 'No upcoming action items in this window.'}
+        {!loading && !error && !hasItems && (
+          <div className="sidebar-empty">No action items found.<br /><br />Try indexing more emails first.</div>
+        )}
+        {!loading && !error && todos && todos.map((item, i) => (
+          <div className="todo-item" key={i}>
+            <span className={`todo-score ${item.priority}`}>{item.priority} priority</span>
+            <div className="todo-subject">{item.title}</div>
+            <div className="todo-snippet">{item.details}</div>
+            {(item.due_date || item.location) && (
+              <div className="todo-meta">
+                {item.due_date && <span>📅 {fmtDate(item.due_date)}</span>}
+                {item.due_date && item.location && <span> &nbsp;·&nbsp; </span>}
+                {item.location && <span>📍 {item.location}</span>}
+              </div>
+            )}
+            <div className="todo-meta">
+              ✉ {item.sender}{item.date ? ` · ${fmtDate(item.date)}` : ''}
+              {item.gmail_url && (
+                <> &nbsp;·&nbsp; <a href={item.gmail_url} target="_blank" rel="noopener noreferrer">Open in Gmail ↗</a></>
+              )}
+            </div>
           </div>
-        )}
-        {!loading && !error && hasItems && (
-          <>
-            {buckets!.next_24h.length > 0 && (
-              <>
-                <div className="todo-bucket-label">⚡ Due in 24 hours</div>
-                {buckets!.next_24h.map((item, i) => <TodoItemCard key={i} item={item} />)}
-              </>
-            )}
-            {buckets!.next_week.length > 0 && (
-              <>
-                <div className="todo-bucket-label">📅 This week</div>
-                {buckets!.next_week.map((item, i) => <TodoItemCard key={i} item={item} />)}
-              </>
-            )}
-            {buckets!.undated.length > 0 && (
-              <>
-                <div className="todo-bucket-label">📝 No Deadline</div>
-                {buckets!.undated.map((item, i) => <TodoItemCard key={i} item={item} />)}
-              </>
-            )}
-          </>
-        )}
+        ))}
       </div>
     </aside>
   );

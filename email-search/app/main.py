@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, Response
 from starlette.middleware.sessions import SessionMiddleware
 
+from app.todo_cache import init_db as init_todo_cache, mark_done as mark_todo_done
 from app.auth import (
     clear_session,
     fetch_user_info,
@@ -32,13 +33,15 @@ from app.inboxes import (
     set_primary,
 )
 from app.search import search
-from app.todos import count_todos, query_todos
+from app.todos import get_parsed_todos
 from app.vectordb import collection_count
 
 logging.basicConfig(level=config.LOG_LEVEL)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(title="Email Semantic Search", version="3.0.0")
+init_todo_cache()
+
+app = FastAPI(title="Essentra", version="2.0.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=config.CORS_ORIGINS,
@@ -161,17 +164,19 @@ async def auth_me(request: Request):
     return {"authenticated": True, "user": user}
 
 
+_avatar_dir = Path(config.DATA_DIR) / "avatars"
+
+
 @app.get("/auth/avatar")
 async def auth_avatar(request: Request):
+    """Serve the user's Google profile picture, cached locally to avoid rate limits."""
     user = _get_user_or_401(request)
     picture_url = user.get("picture", "")
     if not picture_url:
         raise HTTPException(status_code=404, detail="No profile picture")
 
-    user_sub = user["sub"]
-    _avatar_cache_dir.mkdir(parents=True, exist_ok=True)
-
-    cached = next(_avatar_cache_dir.glob(f"{user_sub}.*"), None)
+    _avatar_dir.mkdir(parents=True, exist_ok=True)
+    cached = next(_avatar_dir.glob(f"{user['sub']}.*"), None)
     if cached:
         content_type = mimetypes.guess_type(cached.name)[0] or "image/jpeg"
         return Response(content=cached.read_bytes(), media_type=content_type,
@@ -186,8 +191,9 @@ async def auth_avatar(request: Request):
     if ext in (".jpe", ".jpeg"):
         ext = ".jpg"
 
-    cache_path = _avatar_cache_dir / f"{user_sub}{ext}"
-    cache_path.write_bytes(r.content)
+    cached = _avatar_dir / f"{user['sub']}{ext}"
+    cached.write_bytes(r.content)
+
     return Response(content=r.content, media_type=content_type,
                     headers={"Cache-Control": "public, max-age=86400"})
 
@@ -196,7 +202,7 @@ async def auth_avatar(request: Request):
 # Inbox management routes
 # ---------------------------------------------------------------------------
 
-@app.get("/inboxes")
+@app.get("/api/inboxes")
 async def get_inboxes(request: Request):
     user = _get_user_or_401(request)
     # Migrate existing sessions: ensure the primary inbox record exists even if
@@ -205,7 +211,7 @@ async def get_inboxes(request: Request):
     return {"inboxes": load_inboxes(user["sub"])}
 
 
-@app.delete("/inboxes/{inbox_id}")
+@app.delete("/api/inboxes/{inbox_id}")
 async def delete_inbox(request: Request, inbox_id: str):
     user = _get_user_or_401(request)
     sub = user["sub"]
@@ -215,7 +221,7 @@ async def delete_inbox(request: Request, inbox_id: str):
     return {"status": "removed"}
 
 
-@app.post("/inboxes/{inbox_id}/primary")
+@app.post("/api/inboxes/{inbox_id}/primary")
 async def make_primary(request: Request, inbox_id: str):
     user = _get_user_or_401(request)
     set_primary(user["sub"], inbox_id)
@@ -226,9 +232,7 @@ async def make_primary(request: Request, inbox_id: str):
 # App routes
 # ---------------------------------------------------------------------------
 
-
-
-@app.get("/health")
+@app.get("/api/health")
 async def health(request: Request):
     user = get_current_user(request)
     count = 0
@@ -244,7 +248,7 @@ async def health(request: Request):
     return {"status": "ok", "indexed_emails": count}
 
 
-@app.get("/stats")
+@app.get("/api/stats")
 async def stats(request: Request, inbox_ids: Optional[str] = Query(default=None)):
     user = _get_user_or_401(request)
     sub = user["sub"]
@@ -266,7 +270,7 @@ async def stats(request: Request, inbox_ids: Optional[str] = Query(default=None)
     return {"indexed_count": total_indexed, "last_sync": last_sync}
 
 
-@app.post("/index")
+@app.post("/api/index")
 async def trigger_index(
     request: Request,
     background_tasks: BackgroundTasks,
@@ -308,7 +312,7 @@ async def trigger_index(
     return {"status": "started", "inbox_id": inbox_id, "max_emails": limit}
 
 
-@app.get("/index/status")
+@app.get("/api/index/status")
 async def index_status(request: Request, inbox_id: Optional[str] = Query(default=None)):
     user = _get_user_or_401(request)
     sub = user["sub"]
@@ -324,41 +328,45 @@ async def index_status(request: Request, inbox_id: Optional[str] = Query(default
     }
 
 
-@app.get("/todos")
+@app.get("/api/todos")
 async def todos(
     request: Request,
-    days: int = Query(default=7, ge=1, le=30),
+    n: int = Query(default=10, ge=1, le=100),
     inbox_ids: Optional[str] = Query(default=None),
 ):
     user = _get_user_or_401(request)
     sub = user["sub"]
     inboxes = _resolve_inboxes(sub, inbox_ids)
 
-    merged: dict = {"next_24h": [], "next_week": [], "undated": []}
-    total = 0
+    all_items: list = []
     for inbox in inboxes:
         scope = inbox_scope(sub, inbox["id"])
         try:
-            result = query_todos(user_sub=scope, days=days)
-            for bucket in ("next_24h", "next_week", "undated"):
-                merged[bucket].extend(result[bucket])
-            total += count_todos(scope)
+            items = get_parsed_todos(user_sub=scope, n=n)
+            all_items.extend(items)
         except Exception as e:
             logger.warning("Todos query failed for scope %s: %s", scope, e)
 
-    for bucket in ("next_24h", "next_week"):
-        merged[bucket].sort(key=lambda t: t.get("deadline_date") or "")
-
-    merged["total"] = total
-    return merged
+    return {"n": n, "items": all_items}
 
 
-@app.get("/search")
+@app.post("/api/todos/{gmail_message_id}/done")
+async def mark_todo_done_endpoint(gmail_message_id: str, request: Request):
+    user = _get_user_or_401(request)
+    updated = mark_todo_done(user["sub"], gmail_message_id)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Todo not found")
+    return {"status": "ok"}
+
+
+@app.get("/api/search")
 async def search_emails(
     request: Request,
     q: str = Query(..., min_length=1),
     k: int = Query(default=10, ge=1, le=100),
     inbox_ids: Optional[str] = Query(default=None),
+    from_filter: Optional[str] = Query(default=None),
+    has_attachment: Optional[bool] = Query(default=None),
 ):
     user = _get_user_or_401(request)
     sub = user["sub"]
@@ -368,7 +376,9 @@ async def search_emails(
     for inbox in inboxes:
         scope = inbox_scope(sub, inbox["id"])
         try:
-            results = search(q.strip(), user_sub=scope, k=k)
+            results = search(q.strip(), user_sub=scope, k=k,
+                             from_filter=from_filter or None,
+                             has_attachment=has_attachment)
             for r in results:
                 r["inbox_id"] = inbox["id"]
                 r["inbox_email"] = inbox["email"]

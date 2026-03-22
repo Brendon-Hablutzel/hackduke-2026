@@ -18,7 +18,7 @@ console = Console()
 
 @click.group()
 def cli():
-    """Email Semantic Search — CLI"""
+    """Essentra — CLI"""
 
 
 @cli.command()
