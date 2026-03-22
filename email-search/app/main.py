@@ -1,4 +1,4 @@
-"""FastAPI application with Google OAuth 2.0 sign-in."""
+"""FastAPI application with Google OAuth 2.0 sign-in and multi-inbox support."""
 
 import logging
 import mimetypes
@@ -23,6 +23,15 @@ from app.auth import (
 )
 from app.config import config
 from app.indexer import load_stats, run_indexing
+from app.inboxes import (
+    add_inbox,
+    ensure_primary,
+    get_inbox,
+    inbox_scope,
+    load_inboxes,
+    remove_inbox,
+    set_primary,
+)
 from app.search import search
 from app.todos import get_parsed_todos
 from app.vectordb import collection_count
@@ -42,8 +51,11 @@ app.add_middleware(
 )
 app.add_middleware(SessionMiddleware, secret_key=config.SECRET_KEY, max_age=60 * 60 * 24 * 30)
 
-# Per-user background indexing state
+
+# Per-scope background indexing state keyed by inbox scope string
 _indexing: dict[str, dict] = {}
+
+_avatar_cache_dir = Path(config.DATA_DIR) / "avatars"
 
 
 def _get_user_or_401(request: Request) -> dict:
@@ -53,11 +65,19 @@ def _get_user_or_401(request: Request) -> dict:
     return user
 
 
-def _get_creds_or_401(user_sub: str):
-    creds = load_token(user_sub)
+def _get_creds_or_401(scope: str):
+    creds = load_token(scope)
     if not creds or not creds.valid:
         raise HTTPException(status_code=401, detail="Gmail token expired. Please sign in again.")
     return creds
+
+
+def _resolve_inboxes(user_sub: str, inbox_ids_param: Optional[str]) -> list:
+    all_inboxes = load_inboxes(user_sub)
+    if not inbox_ids_param:
+        return all_inboxes
+    selected = set(inbox_ids_param.split(","))
+    return [i for i in all_inboxes if i["id"] in selected]
 
 
 # ---------------------------------------------------------------------------
@@ -73,6 +93,20 @@ async def auth_login(request: Request):
         prompt="consent",
     )
     request.session["oauth_state"] = state
+    request.session["oauth_purpose"] = "login"
+    return RedirectResponse(auth_url)
+
+
+@app.get("/auth/add_inbox")
+async def auth_add_inbox(request: Request):
+    _get_user_or_401(request)
+    flow = make_flow()
+    auth_url, state = flow.authorization_url(
+        access_type="offline",
+        prompt="select_account consent",
+    )
+    request.session["oauth_state"] = state
+    request.session["oauth_purpose"] = "add_inbox"
     return RedirectResponse(auth_url)
 
 
@@ -82,22 +116,37 @@ async def auth_callback(request: Request, code: str = Query(...), state: str = Q
     if stored_state != state:
         raise HTTPException(status_code=400, detail="OAuth state mismatch. Please try signing in again.")
 
+    purpose = request.session.pop("oauth_purpose", "login")
+
     flow = make_flow()
     flow.fetch_token(code=code)
     creds = flow.credentials
 
     user_info = await fetch_user_info(creds.token)
-    user_sub = user_info["sub"]
+    email = user_info.get("email", "")
+    name = user_info.get("name", "")
+    picture = user_info.get("picture", "")
 
-    save_token(user_sub, creds)
-    set_session_user(request, {
-        "sub": user_sub,
-        "email": user_info.get("email", ""),
-        "name": user_info.get("name", ""),
-        "picture": user_info.get("picture", ""),
-    })
+    if purpose == "add_inbox":
+        current_user = get_current_user(request)
+        if not current_user:
+            raise HTTPException(status_code=401, detail="Not authenticated")
+        sub = current_user["sub"]
+        inbox = add_inbox(sub, email, name, picture)
+        save_token(inbox_scope(sub, inbox["id"]), creds)
+        logger.info("Inbox added for user %s: %s", sub, email)
+    else:
+        sub = user_info["sub"]
+        save_token(sub, creds)
+        ensure_primary(sub, email, name, picture)
+        set_session_user(request, {
+            "sub": sub,
+            "email": email,
+            "name": name,
+            "picture": picture,
+        })
+        logger.info("User signed in: %s", email)
 
-    logger.info("User signed in: %s", user_info.get("email"))
     return RedirectResponse("/")
 
 
@@ -150,6 +199,36 @@ async def auth_avatar(request: Request):
 
 
 # ---------------------------------------------------------------------------
+# Inbox management routes
+# ---------------------------------------------------------------------------
+
+@app.get("/api/inboxes")
+async def get_inboxes(request: Request):
+    user = _get_user_or_401(request)
+    # Migrate existing sessions: ensure the primary inbox record exists even if
+    # the user logged in before multi-inbox support was added.
+    ensure_primary(user["sub"], user.get("email", ""), user.get("name", ""), user.get("picture", ""))
+    return {"inboxes": load_inboxes(user["sub"])}
+
+
+@app.delete("/api/inboxes/{inbox_id}")
+async def delete_inbox(request: Request, inbox_id: str):
+    user = _get_user_or_401(request)
+    sub = user["sub"]
+    if inbox_id == sub:
+        raise HTTPException(status_code=400, detail="Cannot remove your primary account.")
+    remove_inbox(sub, inbox_id)
+    return {"status": "removed"}
+
+
+@app.post("/api/inboxes/{inbox_id}/primary")
+async def make_primary(request: Request, inbox_id: str):
+    user = _get_user_or_401(request)
+    set_primary(user["sub"], inbox_id)
+    return {"status": "ok"}
+
+
+# ---------------------------------------------------------------------------
 # App routes
 # ---------------------------------------------------------------------------
 
@@ -159,73 +238,116 @@ async def health(request: Request):
     count = 0
     if user:
         try:
-            count = collection_count(user["sub"])
+            inboxes = load_inboxes(user["sub"])
+            count = sum(
+                collection_count(inbox_scope(user["sub"], i["id"]))
+                for i in inboxes
+            )
         except ConnectionError as e:
             raise HTTPException(status_code=503, detail=str(e))
     return {"status": "ok", "indexed_emails": count}
 
 
 @app.get("/api/stats")
-async def stats(request: Request):
+async def stats(request: Request, inbox_ids: Optional[str] = Query(default=None)):
     user = _get_user_or_401(request)
-    data = load_stats(user["sub"])
-    try:
-        data["indexed_count"] = collection_count(user["sub"])
-    except ConnectionError as e:
-        raise HTTPException(status_code=503, detail=str(e))
-    return data
+    sub = user["sub"]
+    inboxes = _resolve_inboxes(sub, inbox_ids)
+
+    total_indexed = 0
+    last_sync = None
+    for inbox in inboxes:
+        scope = inbox_scope(sub, inbox["id"])
+        data = load_stats(scope)
+        try:
+            total_indexed += collection_count(scope)
+        except ConnectionError:
+            pass
+        sync = data.get("last_sync")
+        if sync and (last_sync is None or sync > last_sync):
+            last_sync = sync
+
+    return {"indexed_count": total_indexed, "last_sync": last_sync}
 
 
 @app.post("/api/index")
 async def trigger_index(
     request: Request,
     background_tasks: BackgroundTasks,
+    inbox_id: Optional[str] = Query(default=None),
     max_emails: Optional[int] = Query(default=None),
 ):
     user = _get_user_or_401(request)
     sub = user["sub"]
+    inboxes = load_inboxes(sub)
+    if not inboxes:
+        raise HTTPException(status_code=400, detail="No inboxes connected.")
 
-    if _indexing.get(sub, {}).get("running"):
+    if inbox_id is None:
+        target = next((i for i in inboxes if i.get("is_primary")), inboxes[0])
+        inbox_id = target["id"]
+
+    if not get_inbox(sub, inbox_id):
+        raise HTTPException(status_code=404, detail="Inbox not found.")
+
+    scope = inbox_scope(sub, inbox_id)
+    if _indexing.get(scope, {}).get("running"):
         return {"status": "already_running"}
 
-    creds = _get_creds_or_401(sub)
+    creds = _get_creds_or_401(scope)
     limit = max_emails or config.MAX_EMAILS
 
     def _run():
-        _indexing[sub] = {"running": True, "result": None, "error": None}
+        _indexing[scope] = {"running": True, "result": None, "error": None}
         try:
-            result = run_indexing(creds=creds, user_sub=sub, max_emails=limit)
-            _indexing[sub]["result"] = result
+            result = run_indexing(creds=creds, user_sub=scope, max_emails=limit)
+            _indexing[scope]["result"] = result
         except Exception as e:
-            logger.exception("Indexing failed for user %s", sub)
-            _indexing[sub]["error"] = str(e)
+            logger.exception("Indexing failed for scope %s", scope)
+            _indexing[scope]["error"] = str(e)
         finally:
-            _indexing[sub]["running"] = False
+            _indexing[scope]["running"] = False
 
     background_tasks.add_task(_run)
-    return {"status": "started", "max_emails": limit}
+    return {"status": "started", "inbox_id": inbox_id, "max_emails": limit}
 
 
 @app.get("/api/index/status")
-async def index_status(request: Request):
+async def index_status(request: Request, inbox_id: Optional[str] = Query(default=None)):
     user = _get_user_or_401(request)
-    return _indexing.get(user["sub"], {"running": False, "result": None, "error": None})
+    sub = user["sub"]
+    inboxes = load_inboxes(sub)
+
+    if inbox_id:
+        scope = inbox_scope(sub, inbox_id)
+        return _indexing.get(scope, {"running": False, "result": None, "error": None})
+
+    return {
+        i["id"]: _indexing.get(inbox_scope(sub, i["id"]), {"running": False, "result": None, "error": None})
+        for i in inboxes
+    }
 
 
 @app.get("/api/todos")
 async def todos(
     request: Request,
-    n: int = Query(default=20, ge=1, le=200),
+    n: int = Query(default=10, ge=1, le=100),
+    inbox_ids: Optional[str] = Query(default=None),
 ):
     user = _get_user_or_401(request)
-    try:
-        items = get_parsed_todos(user_sub=user["sub"], n=n)
-        return {"n": n, "items": items}
-    except ConnectionError as e:
-        raise HTTPException(status_code=503, detail=str(e))
-    except Exception as e:
-        logger.exception("Todos failed")
-        raise HTTPException(status_code=500, detail=str(e))
+    sub = user["sub"]
+    inboxes = _resolve_inboxes(sub, inbox_ids)
+
+    all_items: list = []
+    for inbox in inboxes:
+        scope = inbox_scope(sub, inbox["id"])
+        try:
+            items = get_parsed_todos(user_sub=scope, n=n)
+            all_items.extend(items)
+        except Exception as e:
+            logger.warning("Todos query failed for scope %s: %s", scope, e)
+
+    return {"n": n, "items": all_items}
 
 
 @app.post("/api/todos/{gmail_message_id}/done")
@@ -242,17 +364,33 @@ async def search_emails(
     request: Request,
     q: str = Query(..., min_length=1),
     k: int = Query(default=10, ge=1, le=100),
+    inbox_ids: Optional[str] = Query(default=None),
     from_filter: Optional[str] = Query(default=None),
     has_attachment: Optional[bool] = Query(default=None),
 ):
     user = _get_user_or_401(request)
-    try:
-        results = search(q.strip(), user_sub=user["sub"], k=k,
-                         from_filter=from_filter or None,
-                         has_attachment=has_attachment)
-        return {"query": q, "k": k, "results": results}
-    except ConnectionError as e:
-        raise HTTPException(status_code=503, detail=str(e))
-    except Exception as e:
-        logger.exception("Search failed")
-        raise HTTPException(status_code=500, detail=str(e))
+    sub = user["sub"]
+    inboxes = _resolve_inboxes(sub, inbox_ids)
+
+    all_results = []
+    for inbox in inboxes:
+        scope = inbox_scope(sub, inbox["id"])
+        try:
+            results = search(q.strip(), user_sub=scope, k=k,
+                             from_filter=from_filter or None,
+                             has_attachment=has_attachment)
+            for r in results:
+                r["inbox_id"] = inbox["id"]
+                r["inbox_email"] = inbox["email"]
+            all_results.extend(results)
+        except ConnectionError:
+            pass
+        except Exception as e:
+            logger.warning("Search failed for scope %s: %s", scope, e)
+
+    all_results.sort(key=lambda r: r["score"], reverse=True)
+    all_results = all_results[:k]
+    for i, r in enumerate(all_results, 1):
+        r["rank"] = i
+
+    return {"query": q, "k": k, "results": all_results}

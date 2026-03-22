@@ -1,12 +1,23 @@
 import { useState, useEffect, useRef } from "react";
+import type { User, Inbox } from "../api";
 import { NavLink } from "react-router-dom";
-import type { User } from "../api";
+import InboxDropdown from "./InboxDropdown";
 
 interface Props {
   user: User | null;
+  inboxes: Inbox[];
+  selectedInboxIds: Set<string>;
+  onInboxSelectionChange: (ids: Set<string>) => void;
+  onInboxesChanged: () => void;
 }
 
-export default function Header({ user }: Props) {
+export default function Header({
+  user,
+  inboxes,
+  selectedInboxIds,
+  onInboxSelectionChange,
+  onInboxesChanged,
+}: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -47,6 +58,12 @@ export default function Header({ user }: Props) {
             >
               ☑ To-do
             </NavLink>
+            <InboxDropdown
+              inboxes={inboxes}
+              selectedIds={selectedInboxIds}
+              onSelectionChange={onInboxSelectionChange}
+              onInboxesChanged={onInboxesChanged}
+            />
             <div className="user-menu" ref={menuRef}>
               <button
                 className="user-chip"
@@ -63,29 +80,12 @@ export default function Header({ user }: Props) {
                 <span>{user.name || user.email}</span>
                 <span className="user-menu-caret">{menuOpen ? "▲" : "▼"}</span>
               </button>
-
               {menuOpen && (
                 <div className="user-dropdown">
                   <div className="user-dropdown-info">
                     <div className="user-dropdown-name">{user.name}</div>
                     <div className="user-dropdown-email">{user.email}</div>
                   </div>
-                  <div className="user-dropdown-divider" />
-                  <NavLink
-                    to="/"
-                    end
-                    className="user-dropdown-item user-dropdown-nav"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Search
-                  </NavLink>
-                  <NavLink
-                    to="/todos"
-                    className="user-dropdown-item user-dropdown-nav"
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    ☑ To-do
-                  </NavLink>
                   <div className="user-dropdown-divider" />
                   <a className="user-dropdown-item" href="/auth/logout">
                     Sign out
