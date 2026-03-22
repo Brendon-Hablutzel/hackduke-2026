@@ -148,6 +148,7 @@ def get_parsed_todos(user_sub: str, n: int = 20) -> List[dict]:
     scored = [
         (m, doc, _action_score(m.get("subject", ""), m.get("snippet", "")))
         for m, doc in recent
+        if not m.get("has_ses_outgoing") and len(m.get("snippet", "").strip()) >= 20
     ]
     action_items = [
         (m, doc) for m, doc, score in sorted(scored, key=lambda x: x[2], reverse=True)
