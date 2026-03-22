@@ -84,7 +84,6 @@ def fetch_emails(creds: Credentials, max_emails: int = 500) -> Generator[dict, N
         params = {
             "userId": "me",
             "maxResults": batch_size,
-            "labelIds": ["INBOX"],
         }
         if page_token:
             params["pageToken"] = page_token
