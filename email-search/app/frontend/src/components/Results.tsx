@@ -5,6 +5,10 @@ interface Props {
   query: string;
   error: string | null;
   multiInbox: boolean;
+  total: number;
+  page: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
 }
 
 function scoreClass(s: number): string {
@@ -23,7 +27,8 @@ function fmtDate(str: string): string {
   }
 }
 
-export default function Results({ results, query, error, multiInbox }: Props) {
+export default function Results({ results, query, error, multiInbox, total, page, pageSize, onPageChange }: Props) {
+  const totalPages = Math.ceil(total / pageSize);
   if (error) {
     return (
       <div className="results-section">
@@ -63,7 +68,7 @@ export default function Results({ results, query, error, multiInbox }: Props) {
   return (
     <div className="results-section">
       <div className="results-header">
-        {results.length} results for <strong>"{query}"</strong>
+        {total} results for <strong>"{query}"</strong>
       </div>
       {results.map((r) => (
         <a
@@ -99,6 +104,27 @@ export default function Results({ results, query, error, multiInbox }: Props) {
           <div className="card-snippet">{r.snippet}</div>
         </a>
       ))}
+      {totalPages > 1 && (
+        <div className="pagination">
+          <button
+            className="btn-secondary"
+            onClick={() => onPageChange(page - 1)}
+            disabled={page === 0}
+          >
+            ← Prev
+          </button>
+          <span className="pagination-info">
+            Page {page + 1} of {totalPages}
+          </span>
+          <button
+            className="btn-secondary"
+            onClick={() => onPageChange(page + 1)}
+            disabled={page >= totalPages - 1}
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </div>
   );
 }

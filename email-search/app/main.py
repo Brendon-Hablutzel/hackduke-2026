@@ -364,6 +364,7 @@ async def search_emails(
     request: Request,
     q: str = Query(..., min_length=1),
     k: int = Query(default=10, ge=1, le=100),
+    page: int = Query(default=0, ge=0),
     inbox_ids: Optional[str] = Query(default=None),
     from_filter: Optional[str] = Query(default=None),
     has_attachment: Optional[bool] = Query(default=None),
@@ -389,8 +390,10 @@ async def search_emails(
             logger.warning("Search failed for scope %s: %s", scope, e)
 
     all_results.sort(key=lambda r: r["score"], reverse=True)
-    all_results = all_results[:k]
-    for i, r in enumerate(all_results, 1):
+    total = len(all_results)
+    start = page * k
+    page_results = all_results[start:start + k]
+    for i, r in enumerate(page_results, start + 1):
         r["rank"] = i
 
-    return {"query": q, "k": k, "results": all_results}
+    return {"query": q, "k": k, "page": page, "total": total, "results": page_results}
