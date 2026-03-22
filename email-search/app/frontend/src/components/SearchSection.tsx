@@ -92,7 +92,7 @@ export default function SearchSection({
           />
         </div>
         <div className="filter-bar-item">
-          <label className="filter-bar-checkbox">
+          <label className="filter-bar-checkbox" style={{ userSelect: 'none' }}>
             <input
               type="checkbox"
               checked={filters.hasAttachment}
