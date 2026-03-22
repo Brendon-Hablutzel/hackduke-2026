@@ -88,8 +88,10 @@ export async function searchEmails(
   k: number,
   filters: SearchFilters,
   inboxIds?: string,
-): Promise<{ query: string; results: SearchResult[] }> {
+  page?: number,
+): Promise<{ query: string; results: SearchResult[]; total: number; page: number; k: number }> {
   const params = new URLSearchParams({ q, k: String(k) });
+  if (page) params.set('page', String(page));
   if (filters.from) params.set('from_filter', filters.from);
   if (filters.hasAttachment) params.set('has_attachment', 'true');
   if (inboxIds) params.set('inbox_ids', inboxIds);

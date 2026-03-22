@@ -34,7 +34,7 @@ def search(query: str, user_sub: str, k: int = 10,
     if count == 0:
         return []
 
-    candidate_k = min(k * 3, count)
+    candidate_k = min(max(k * 10, 100), count)
     embedding = embed_query(query)
 
     try:
@@ -88,4 +88,4 @@ def search(query: str, user_sub: str, k: int = 10,
     for i, r in enumerate(results):
         r["rank"] = i + 1
 
-    return results[:k]
+    return results
