@@ -49,6 +49,8 @@ export default function App() {
   const [maxEmails, setMaxEmails] = useState(500);
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<SearchResult[] | null>(null);
+  const [searchTotal, setSearchTotal] = useState(0);
+  const [searchPage, setSearchPage] = useState(0);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [lastQuery, setLastQuery] = useState('');
 
@@ -171,15 +173,18 @@ export default function App() {
     }
   };
 
-  async function doSearchWith(q: string, inboxIds?: string) {
+  async function doSearchWith(q: string, inboxIds?: string, page = 0) {
     setSearching(true);
     setSearchError(null);
     setLastQuery(q);
+    setSearchPage(page);
     try {
-      const data = await searchEmails(q, k, filters, inboxIds);
+      const data = await searchEmails(q, k, filters, inboxIds, page);
       setResults(data.results);
+      setSearchTotal(data.total);
     } catch (e: unknown) {
       setResults([]);
+      setSearchTotal(0);
       setSearchError((e as Error).message);
     } finally {
       setSearching(false);
@@ -189,7 +194,12 @@ export default function App() {
   const doSearch = async () => {
     const q = query.trim();
     if (!q) return;
-    doSearchWith(q, getIds());
+    setSearchPage(0);
+    doSearchWith(q, getIds(), 0);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    doSearchWith(lastQuery, getIds(), newPage);
   };
 
   if (!authChecked) return null;
@@ -235,7 +245,7 @@ export default function App() {
               filters={filters}
               onFiltersChange={setFilters}
             />
-            <Results results={results} query={lastQuery} error={searchError} multiInbox={inboxes.length > 1} />
+            <Results results={results} query={lastQuery} error={searchError} multiInbox={inboxes.length > 1} total={searchTotal} page={searchPage} pageSize={k} onPageChange={handlePageChange} />
           </div>
         } />
         <Route path="/todos" element={
