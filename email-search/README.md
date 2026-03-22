@@ -1,4 +1,4 @@
-# Email Semantic Search
+# Essentra - Email Semantic Search
 
 A local, self-hosted web app that lets users sign in with Google, index their Gmail inbox as vector embeddings, and search with natural language queries.
 
@@ -71,9 +71,11 @@ Open [http://localhost:8000](http://localhost:8000) in your browser. Click **Sig
 ## Indexing Emails
 
 ### Via Web UI (recommended)
+
 Open [http://localhost:8000](http://localhost:8000), sign in, and click **↻ Re-index**. Indexing runs in the background; the status updates in real time.
 
 ### Via API (must be signed in; session cookie required)
+
 ```bash
 curl -X POST "http://localhost:8000/index?max_emails=500" --cookie "session=<your-session-cookie>"
 ```
@@ -85,6 +87,7 @@ Indexing is incremental — emails already in ChromaDB are skipped on re-runs.
 ## Searching
 
 ### Via CLI
+
 ```bash
 python cli.py search "someone asked me for budget approval"
 python cli.py search "flight confirmation" -k 5
@@ -92,25 +95,27 @@ python cli.py search "quarterly report" --json   # raw JSON output
 ```
 
 ### Via API
+
 ```bash
 curl "http://localhost:8000/search?q=budget+approval&k=10"
 ```
 
 ### Via Web UI
+
 Open [http://localhost:8000](http://localhost:8000), type your query, and press **Search**.
 
 ---
 
 ## API Reference
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/` | Web UI |
-| GET | `/health` | Health check + indexed count |
-| GET | `/stats` | Indexed count + last sync time |
-| POST | `/index?max_emails=500` | Trigger background indexing |
-| GET | `/index/status` | Check indexing progress |
-| GET | `/search?q=...&k=10` | Semantic search |
+| Method | Endpoint                | Description                    |
+| ------ | ----------------------- | ------------------------------ |
+| GET    | `/`                     | Web UI                         |
+| GET    | `/health`               | Health check + indexed count   |
+| GET    | `/stats`                | Indexed count + last sync time |
+| POST   | `/index?max_emails=500` | Trigger background indexing    |
+| GET    | `/index/status`         | Check indexing progress        |
+| GET    | `/search?q=...&k=10`    | Semantic search                |
 
 ---
 
@@ -155,17 +160,17 @@ email-search/
 
 ## Configuration (`.env`)
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `MAX_EMAILS` | `500` | Max emails to fetch per index run |
-| `EMBEDDING_MODEL` | `all-MiniLM-L6-v2` | Sentence Transformers model name |
-| `CHROMA_HOST` | `chromadb` | ChromaDB hostname (use `localhost` for local dev) |
-| `CHROMA_PORT` | `8000` | ChromaDB port |
-| `CHROMA_COLLECTION` | `emails` | Collection name |
-| `CREDENTIALS_PATH` | `/app/credentials/credentials.json` | Path to OAuth credentials |
-| `TOKEN_PATH` | `/app/credentials/token.json` | Path to saved OAuth token |
-| `DATA_DIR` | `/app/data` | Directory for stats file |
-| `LOG_LEVEL` | `INFO` | Python logging level |
+| Variable            | Default                             | Description                                       |
+| ------------------- | ----------------------------------- | ------------------------------------------------- |
+| `MAX_EMAILS`        | `500`                               | Max emails to fetch per index run                 |
+| `EMBEDDING_MODEL`   | `all-MiniLM-L6-v2`                  | Sentence Transformers model name                  |
+| `CHROMA_HOST`       | `chromadb`                          | ChromaDB hostname (use `localhost` for local dev) |
+| `CHROMA_PORT`       | `8000`                              | ChromaDB port                                     |
+| `CHROMA_COLLECTION` | `emails`                            | Collection name                                   |
+| `CREDENTIALS_PATH`  | `/app/credentials/credentials.json` | Path to OAuth credentials                         |
+| `TOKEN_PATH`        | `/app/credentials/token.json`       | Path to saved OAuth token                         |
+| `DATA_DIR`          | `/app/data`                         | Directory for stats file                          |
+| `LOG_LEVEL`         | `INFO`                              | Python logging level                              |
 
 ---
 

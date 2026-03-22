@@ -21,6 +21,8 @@ function fmtDate(str: string | null): string {
 }
 
 export default function TodoSidebar({ open, onClose, todos, loading, error, todoN, onTodoNChange, onRefresh }: Props) {
+  const hasItems = todos && todos.length > 0;
+
   return (
     <aside className={`todo-sidebar${open ? ' open' : ''}`}>
       <div className="sidebar-header">
@@ -29,12 +31,11 @@ export default function TodoSidebar({ open, onClose, todos, loading, error, todo
           <button className="sidebar-close" onClick={onClose} title="Close">✕</button>
         </div>
         <div className="sidebar-controls">
-          <span>From latest</span>
+          <span>Show:</span>
           <select value={todoN} onChange={e => onTodoNChange(Number(e.target.value))}>
-            <option value={10}>10 emails</option>
-            <option value={20}>20 emails</option>
-            <option value={50}>50 emails</option>
-            <option value={100}>100 emails</option>
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={20}>20</option>
           </select>
           <button className="sidebar-refresh" onClick={onRefresh}>↻ Refresh</button>
         </div>
@@ -46,11 +47,8 @@ export default function TodoSidebar({ open, onClose, todos, loading, error, todo
         {!loading && error && (
           <div className="sidebar-empty">Error: {error}</div>
         )}
-        {!loading && !error && todos !== null && todos.length === 0 && (
-          <div className="sidebar-empty">
-            No action items found in these emails.<br /><br />
-            Try indexing more emails first.
-          </div>
+        {!loading && !error && !hasItems && (
+          <div className="sidebar-empty">No action items found.<br /><br />Try indexing more emails first.</div>
         )}
         {!loading && !error && todos && todos.map((item, i) => (
           <div className="todo-item" key={i}>

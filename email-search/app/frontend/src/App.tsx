@@ -1,25 +1,47 @@
 import { useState, useEffect, useCallback } from 'react';
+import type { User, Inbox, SearchResult, IndexStatus, Stats, TodoItem } from './api';
+import { getMe, getStats, getIndexStatus, triggerIndex, searchEmails, getTodos, getInboxes } from './api';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
-import type { User, SearchResult, IndexStatus, Stats, TodoItem, SearchFilters } from './api';
-import { getMe, getStats, getIndexStatus, triggerIndex, searchEmails, getTodos, markTodoDone } from './api';
+import type { SearchFilters } from './api';
+import { markTodoDone } from './api';
 import Header from './components/Header';
 import Landing from './components/Landing';
 import SearchSection from './components/SearchSection';
 import Results from './components/Results';
 import TodoPage from './components/TodoPage';
 
-function Layout({ user }: { user: User }) {
+function Layout({ user, inboxes, selectedInboxIds, onInboxSelectionChange, onInboxesChanged }: {
+  user: User;
+  inboxes: Inbox[];
+  selectedInboxIds: Set<string>;
+  onInboxSelectionChange: (ids: Set<string>) => void;
+  onInboxesChanged: () => void;
+}) {
   return (
     <>
-      <Header user={user} />
+      <Header
+        user={user}
+        inboxes={inboxes}
+        selectedInboxIds={selectedInboxIds}
+        onInboxSelectionChange={onInboxSelectionChange}
+        onInboxesChanged={onInboxesChanged}
+      />
       <Outlet />
     </>
   );
 }
 
+function inboxIdsParam(inboxes: Inbox[], selected: Set<string>): string | undefined {
+  if (selected.size === 0 || selected.size === inboxes.length) return undefined;
+  return [...selected].join(',');
+}
+
 export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [authChecked, setAuthChecked] = useState(false);
+
+  const [inboxes, setInboxes] = useState<Inbox[]>([]);
+  const [selectedInboxIds, setSelectedInboxIds] = useState<Set<string>>(new Set());
 
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<SearchFilters>({ from: '', hasAttachment: false, smartFilter: true });
@@ -36,11 +58,11 @@ export default function App() {
   const [todos, setTodos] = useState<TodoItem[] | null>(null);
   const [todosLoading, setTodosLoading] = useState(false);
   const [todosError, setTodosError] = useState<string | null>(null);
-  const [todoN, setTodoN] = useState(20);
+  const [todoN, setTodoN] = useState(10);
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (ids?: string) => {
     try {
-      setStats(await getStats());
+      setStats(await getStats(ids));
     } catch {
       // non-critical
     }
@@ -48,7 +70,16 @@ export default function App() {
 
   const pollIndexStatus = useCallback(async () => {
     try {
-      const status = await getIndexStatus();
+      const raw = await getIndexStatus();
+      // getIndexStatus may return a single status or dict keyed by inbox_id
+      // Normalize to a single IndexStatus
+      let status: IndexStatus;
+      if (typeof (raw as any).running === 'boolean') {
+        status = raw as IndexStatus;
+      } else {
+        const entries = Object.values(raw as unknown as Record<string, IndexStatus>);
+        status = entries.find(e => e.running) ?? entries.find(e => e.error) ?? entries.find(e => e.result) ?? { running: false, result: null, error: null };
+      }
       setIndexStatus(status);
       if (status.running) {
         setTimeout(pollIndexStatus, 3000);
@@ -60,22 +91,34 @@ export default function App() {
     }
   }, [fetchStats]);
 
+  const fetchInboxes = useCallback(async () => {
+    try {
+      const data = await getInboxes();
+      setInboxes(data.inboxes);
+    } catch {
+      // non-critical
+    }
+  }, []);
+
   useEffect(() => {
     getMe().then(data => {
       if (data.authenticated) {
         setUser(data.user);
         fetchStats();
         pollIndexStatus();
+        fetchInboxes();
       }
       setAuthChecked(true);
     }).catch(() => setAuthChecked(true));
-  }, [fetchStats, pollIndexStatus]);
+  }, [fetchStats, pollIndexStatus, fetchInboxes]);
 
-  const loadTodos = useCallback(async (n: number) => {
+  const getIds = useCallback(() => inboxIdsParam(inboxes, selectedInboxIds), [inboxes, selectedInboxIds]);
+
+  const loadTodos = useCallback(async (n: number, ids?: string) => {
     setTodosLoading(true);
     setTodosError(null);
     try {
-      const data = await getTodos(n);
+      const data = await getTodos(n, ids);
       setTodos(data.items);
     } catch (e: unknown) {
       const err = e as Error & { status?: number };
@@ -94,36 +137,46 @@ export default function App() {
     try {
       await markTodoDone(gmailMessageId);
     } catch {
-      loadTodos(todoN);
+      loadTodos(todoN, getIds());
     }
-  }, [loadTodos, todoN]);
+  }, [loadTodos, todoN, getIds]);
 
   const handleTodoNChange = (n: number) => {
     setTodoN(n);
-    loadTodos(n);
+    loadTodos(n, getIds());
+  };
+
+  const handleInboxSelectionChange = (ids: Set<string>) => {
+    setSelectedInboxIds(ids);
+    const param = inboxIdsParam(inboxes, ids);
+    fetchStats(param);
+    if (results !== null && lastQuery) {
+      doSearchWith(lastQuery, param);
+    }
+  };
+
+  const handleInboxesChanged = async () => {
+    await fetchInboxes();
+    fetchStats(getIds());
   };
 
   const handleReindex = async () => {
     setIndexStatus(prev => ({ ...prev ?? { result: null, error: null }, running: true }));
-    try {
-      const data = await triggerIndex(maxEmails);
-      if (data.status === 'started' || data.status === 'already_running') {
-        pollIndexStatus();
-      }
-    } catch (e: unknown) {
-      const err = e as Error;
-      setIndexStatus({ running: false, result: null, error: err.message ?? 'Failed to start indexing' });
+    const settled = await Promise.allSettled(inboxes.map(inbox => triggerIndex(maxEmails, inbox.id)));
+    const failed = settled.find(r => r.status === 'rejected') as PromiseRejectedResult | undefined;
+    if (failed) {
+      setIndexStatus({ running: false, result: null, error: (failed.reason as Error).message });
+    } else {
+      pollIndexStatus();
     }
   };
 
-  const doSearch = async () => {
-    const q = query.trim();
-    if (!q) return;
+  async function doSearchWith(q: string, inboxIds?: string) {
     setSearching(true);
     setSearchError(null);
     setLastQuery(q);
     try {
-      const data = await searchEmails(q, k, filters);
+      const data = await searchEmails(q, k, filters, inboxIds);
       setResults(data.results);
     } catch (e: unknown) {
       setResults([]);
@@ -131,20 +184,40 @@ export default function App() {
     } finally {
       setSearching(false);
     }
+  }
+
+  const doSearch = async () => {
+    const q = query.trim();
+    if (!q) return;
+    doSearchWith(q, getIds());
   };
 
   if (!authChecked) return null;
 
   if (!user) return (
     <>
-      <Header user={null} />
+      <Header
+        user={null}
+        inboxes={[]}
+        selectedInboxIds={new Set()}
+        onInboxSelectionChange={() => {}}
+        onInboxesChanged={() => {}}
+      />
       <Landing />
     </>
   );
 
   return (
     <Routes>
-      <Route element={<Layout user={user} />}>
+      <Route element={
+        <Layout
+          user={user}
+          inboxes={inboxes}
+          selectedInboxIds={selectedInboxIds}
+          onInboxSelectionChange={handleInboxSelectionChange}
+          onInboxesChanged={handleInboxesChanged}
+        />
+      }>
         <Route path="/" element={
           <div className="main-content">
             <SearchSection
@@ -162,7 +235,7 @@ export default function App() {
               filters={filters}
               onFiltersChange={setFilters}
             />
-            <Results results={results} query={lastQuery} error={searchError} />
+            <Results results={results} query={lastQuery} error={searchError} multiInbox={inboxes.length > 1} />
           </div>
         } />
         <Route path="/todos" element={
@@ -172,8 +245,8 @@ export default function App() {
             error={todosError}
             todoN={todoN}
             onTodoNChange={handleTodoNChange}
-            onRefresh={() => loadTodos(todoN)}
-            onMount={() => { if (todos === null) loadTodos(todoN); }}
+            onRefresh={() => loadTodos(todoN, getIds())}
+            onMount={() => { if (todos === null) loadTodos(todoN, getIds()); }}
             onMarkDone={handleMarkDone}
           />
         } />

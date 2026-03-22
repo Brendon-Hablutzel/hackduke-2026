@@ -97,6 +97,26 @@ def get_todos(user_sub: str, n: int = 20) -> List[dict]:
     return todos
 
 
+def count_todos(user_sub: str) -> int:
+    """Return the total number of indexed emails for this scope."""
+    try:
+        return get_collection(user_sub).count()
+    except Exception:
+        return 0
+
+
+def query_todos(user_sub: str, days: int = 7) -> dict:  # noqa: ARG001
+    """Return todos bucketed into next_24h, next_week, undated."""
+    items = get_todos(user_sub, n=50)
+    # Without deadline extraction all items go in undated
+    return {
+        "next_24h": [],
+        "next_week": [],
+        "undated": items,
+        "total": count_todos(user_sub),
+    }
+
+
 def get_parsed_todos(user_sub: str, n: int = 20) -> List[dict]:
     """
     Fetch the most recent `n` emails, filter to action-needed ones (score >= 0.25),
